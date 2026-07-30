@@ -2,332 +2,406 @@
 <html lang="el">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>✨ Το Μαγικό Συντριβάνι των Ευχών ✨</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>3D Wishing Fountain</title>
     <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
+        body { margin: 0; overflow: hidden; background-color: #020611; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; transition: background-color 0.8s ease; touch-action: none; }
+        #canvas-container { width: 100vw; height: 100vh; }
+        
+        /* UI Counter */
+        #counter-badge {
+            position: absolute; top: 20px; left: 20px;
+            background: rgba(10, 25, 47, 0.75); backdrop-filter: blur(12px);
+            border: 1px solid rgba(0, 212, 255, 0.3); padding: 10px 16px;
+            border-radius: 16px; color: #fff; font-size: 14px; font-weight: 600;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4); display: flex; align-items: center; gap: 8px;
+            z-index: 10; transition: all 0.5s ease; pointer-events: none;
+        }
+        #counter-badge span { color: #ffb703; font-size: 18px; font-weight: bold; text-shadow: 0 0 10px rgba(255,183,3,0.5); }
+
+        /* Day/Night Toggle Button */
+        #theme-toggle {
+            position: absolute; top: 20px; right: 20px;
+            background: rgba(10, 25, 47, 0.75); backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.2); padding: 10px 16px;
+            border-radius: 20px; color: #fff; font-size: 13px; font-weight: bold;
+            cursor: pointer; z-index: 10; transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        #theme-toggle:hover { transform: scale(1.05); background: rgba(0, 212, 255, 0.2); }
+
+        /* ✨ Σλόγκαν ✨ */
+        #slogan {
+            position: absolute;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(10, 25, 47, 0.6);
+            backdrop-filter: blur(8px);
+            padding: 8px 25px;
+            border-radius: 25px;
+            color: #e0f7fa;
+            font-size: 16px;
+            font-style: italic;
+            font-weight: 300;
+            letter-spacing: 1px;
+            text-shadow: 0 0 15px rgba(0, 212, 255, 0.6);
+            z-index: 5;
+            pointer-events: none;
+            transition: all 0.5s ease;
+            white-space: nowrap;
         }
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #686de0 100%);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-            color: #333;
+        /* Input Controls */
+        #ui {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            display: flex; gap: 8px; background: rgba(10, 25, 47, 0.8);
+            padding: 8px 12px; border-radius: 30px; backdrop-filter: blur(12px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.15);
+            z-index: 10; transition: all 0.5s ease; max-width: 90vw;
+        }
+        input {
+            padding: 10px 16px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.2); outline: none;
+            width: 180px; font-size: 14px; background: rgba(255, 255, 255, 0.95); color: #000;
+        }
+        button.throw-btn {
+            padding: 10px 18px; border-radius: 20px; border: none;
+            background: linear-gradient(135deg, #ffb703, #fb8500); color: #000;
+            font-weight: bold; font-size: 14px; cursor: pointer; transition: all 0.2s;
+            box-shadow: 0 4px 15px rgba(251, 133, 0, 0.4); white-space: nowrap;
         }
 
-        .fountain-card {
-            background: rgba(255, 255, 255, 0.92);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 30px;
-            width: 100%;
-            max-width: 550px;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
-            text-align: center;
+        /* Day Theme UI Adaptations */
+        body.day-mode { background-color: #87ceeb; }
+        body.day-mode #counter-badge, 
+        body.day-mode #theme-toggle, 
+        body.day-mode #ui {
+            background: rgba(255, 255, 255, 0.7);
+            color: #1a2b4c;
+            border-color: rgba(255, 255, 255, 0.8);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+        }
+        body.day-mode #slogan {
+            background: rgba(255, 255, 255, 0.5);
+            color: #1a2b4c;
             border: 1px solid rgba(255, 255, 255, 0.3);
         }
 
-        .fountain-icon {
-            font-size: 55px;
-            margin-bottom: 10px;
-            display: inline-block;
-            animation: float 3s ease-in-out infinite;
+        /* Modal */
+        #wishModal {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.8);
+            background: rgba(10, 25, 47, 0.92); backdrop-filter: blur(20px);
+            border: 1px solid rgba(0, 212, 255, 0.4); padding: 25px 30px; border-radius: 20px;
+            color: #fff; text-align: center; box-shadow: 0 15px 50px rgba(0, 212, 255, 0.25);
+            opacity: 0; pointer-events: none; transition: all 0.3s ease; z-index: 20; max-width: 85vw;
         }
-
-        @keyframes float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
-        }
-
-        h1 {
-            color: #1e3c72;
-            font-size: 26px;
-            margin-bottom: 8px;
-        }
-
-        p.subtitle {
-            color: #666;
-            font-size: 14px;
-            margin-bottom: 25px;
-        }
-
-        .form-container {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 25px;
-        }
-
-        input[type="text"] {
-            flex: 1;
-            padding: 14px 18px;
-            border: 2px solid #e0e0e0;
-            border-radius: 12px;
-            font-size: 15px;
-            outline: none;
-            transition: border-color 0.3s;
-        }
-
-        input[type="text"]:focus {
-            border-color: #4834d4;
-        }
-
-        .btn-add {
-            background: linear-gradient(135deg, #4834d4, #686de0);
-            color: white;
-            border: none;
-            padding: 14px 22px;
-            border-radius: 12px;
-            font-weight: bold;
-            font-size: 15px;
-            cursor: pointer;
-            box-shadow: 0 4px 12px rgba(72, 52, 212, 0.3);
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-
-        .btn-add:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 15px rgba(72, 52, 212, 0.4);
-        }
-
-        .wishes-title {
-            text-align: left;
-            font-size: 18px;
-            color: #2c3e50;
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        ul {
-            list-style: none;
-            max-height: 350px;
-            overflow-y: auto;
-            padding-right: 5px;
-        }
-
-        /* Scrollbar styling */
-        ul::-webkit-scrollbar { width: 6px; }
-        ul::-webkit-scrollbar-thumb { background: #ccc; border-radius: 10px; }
-
-        li {
-            background: #ffffff;
-            margin-bottom: 12px;
-            padding: 14px 16px;
-            border-radius: 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-            border-left: 5px solid #686de0;
-            transition: all 0.3s ease;
-        }
-
-        li.fulfilled {
-            background: #f1f9f5;
-            border-left-color: #2ed573;
-        }
-
-        li.fulfilled .wish-text {
-            text-decoration: line-through;
-            color: #a4b0be;
-        }
-
-        .wish-text {
-            text-align: left;
-            font-size: 15px;
-            color: #2f3542;
-            word-break: break-word;
-            flex: 1;
-            padding-right: 10px;
-        }
-
-        .actions {
-            display: flex;
-            gap: 6px;
-        }
-
-        .btn-action {
-            background: #f1f2f6;
-            border: none;
-            width: 34px;
-            height: 34px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: background 0.2s, transform 0.1s;
-        }
-
-        .btn-action:hover {
-            transform: scale(1.1);
-        }
-
-        .btn-fulfill:hover { background: #e1f5fe; }
-        .btn-delete:hover { background: #ffeaa7; }
-
-        .empty-state {
-            color: #888;
-            font-style: italic;
-            padding: 20px;
-            font-size: 14px;
-        }
+        #wishModal.active { opacity: 1; pointer-events: auto; transform: translate(-50%, -50%) scale(1); }
+        #wishModal h3 { margin: 0 0 10px 0; color: #ffb703; font-size: 16px; }
+        #wishModal p { font-size: 18px; font-style: italic; margin: 12px 0; color: #e0f7fa; line-height: 1.4; }
+        #wishModal button { margin-top: 8px; padding: 8px 20px; font-size: 13px; background: #00d4ff; color: #000; border: none; border-radius: 18px; font-weight: bold; cursor: pointer; }
     </style>
+    
+    <!-- Three.js & OrbitControls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <!-- GLTF Loader -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 </head>
 <body>
-
-<div class="fountain-card">
-    <div class="fountain-icon">⛲✨</div>
-    <h1>Συντριβάνι των Ευχών</h1>
-    <p class="subtitle">Ρίξε ένα εικονικό κέρμα και κάνε μια ευχή!</p>
-
-    <!-- Φόρμα Υποβολής -->
-    <div class="form-container">
-        <input type="text" id="wishInput" placeholder="Γράψε την ευχή σου εδώ..." onkeypress="handleKeyPress(event)">
-        <button class="btn-add" onclick="addWish()">Ρίξε Ευχή 🪙</button>
+    <div id="canvas-container"></div>
+    
+    <div id="counter-badge">
+        🪙 Ευχές: <span id="wishCounter">0</span>
     </div>
 
-    <div class="wishes-title">
-        <span>📜</span> Ευχές στο Συντριβάνι:
+    <div id="slogan">Κάνε μια ευχή, άλλαξε τη μοίρα σου...</div>
+
+    <button id="theme-toggle" onclick="toggleDayNight()">☀️ Μέρα / 🌙 Νύχτα</button>
+
+    <div id="ui">
+        <input type="text" id="wishInput" placeholder="Γράψε μια ευχή...">
+        <button class="throw-btn" onclick="throwCoin()">Ρίξε 🪙</button>
     </div>
 
-    <ul id="wishesList">
-        <!-- Εδώ φορτώνονται οι ευχές -->
-    </ul>
-</div>
+    <div id="wishModal">
+        <h3>✨ Μια ευχή που διαβάστηκε:</h3>
+        <p id="wishTextDisplay">"..."</p>
+        <button onclick="closeWishModal()">Κλείσιμο</button>
+    </div>
 
-<script>
-    // Live URL του Backend στο Render
-    const API_URL = 'https://fountain-backend-mgxf.onrender.com/api/wishes';
+    <script>
+        // Το live URL του Backend στο Render
+        const API_URL = 'https://fountain-backend-mgxf.onrender.com/api/wishes';
 
-    // 1. Φόρτωση όλων των ευχών
-    async function fetchWishes() {
-        try {
-            const res = await fetch(API_URL);
-            const wishes = await res.json();
-            
-            const list = document.getElementById('wishesList');
-            list.innerHTML = '';
+        // --- Ήχος Splash ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playSplashSound() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const bufferSize = audioCtx.sampleRate * 0.35;
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
 
-            if (wishes.length === 0) {
-                list.innerHTML = '<div class="empty-state">Δεν υπάρχουν ευχές ακόμα. Γίνε ο πρώτος που θα ρίξει μια!</div>';
-                return;
+            const noise = audioCtx.createBufferSource();
+            noise.buffer = buffer;
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(1400, audioCtx.currentTime);
+            filter.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + 0.3);
+
+            const gain = audioCtx.createGain();
+            gain.gain.setValueAtTime(0.9, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.32);
+
+            noise.connect(filter);
+            filter.connect(gain);
+            gain.connect(audioCtx.destination);
+            noise.start();
+        }
+
+        // --- Three.js Setup ---
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x020611, 0.03);
+
+        const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 4.2, 6.5);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+        // --- OrbitControls ---
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.target.set(0, 0.8, 0);
+        controls.minDistance = 3.5;
+        controls.maxDistance = 12;
+        controls.maxPolarAngle = Math.PI / 2 - 0.05;
+
+        // --- Φωτισμός ---
+        const ambientLight = new THREE.AmbientLight(0x1c2d42, 1.5);
+        scene.add(ambientLight);
+
+        const mainDirLight = new THREE.DirectionalLight(0xfff5ea, 2.5);
+        mainDirLight.position.set(5, 10, 5);
+        mainDirLight.castShadow = true;
+        mainDirLight.shadow.mapSize.width = 2048;
+        mainDirLight.shadow.mapSize.height = 2048;
+        scene.add(mainDirLight);
+
+        const poolLight = new THREE.PointLight(0x00d4ff, 4, 10);
+        poolLight.position.set(0, 0.6, 0);
+        scene.add(poolLight);
+
+        let isDayMode = false;
+        function toggleDayNight() {
+            isDayMode = !isDayMode;
+            document.body.classList.toggle('day-mode', isDayMode);
+            if (isDayMode) {
+                scene.fog.color.setHex(0x87ceeb);
+                ambientLight.color.setHex(0xffffff);
+                ambientLight.intensity = 2.2;
+                mainDirLight.intensity = 3.5;
+                poolLight.intensity = 1.0;
+            } else {
+                scene.fog.color.setHex(0x020611);
+                ambientLight.color.setHex(0x1c2d42);
+                ambientLight.intensity = 1.5;
+                mainDirLight.intensity = 2.5;
+                poolLight.intensity = 4.0;
             }
-            
-            wishes.forEach(wish => {
-                const li = document.createElement('li');
-                if (wish.isFulfilled) {
-                    li.className = 'fulfilled';
+        }
+
+        // --- 3D Μοντέλο Συντριβανιού ---
+        const fountainGroup = new THREE.Group();
+        const stoneMat = new THREE.MeshStandardMaterial({ color: 0x3d4353, roughness: 0.8, metalness: 0.2 });
+
+        const baseGeo = new THREE.CylinderGeometry(2.3, 2.6, 0.8, 48);
+        const base = new THREE.Mesh(baseGeo, stoneMat);
+        base.receiveShadow = base.castShadow = true;
+        fountainGroup.add(base);
+
+        const rimGeo = new THREE.TorusGeometry(2.35, 0.18, 16, 48);
+        const rim = new THREE.Mesh(rimGeo, stoneMat);
+        rim.rotation.x = Math.PI / 2; rim.position.y = 0.4; rim.castShadow = true;
+        fountainGroup.add(rim);
+
+        const centerColGeo = new THREE.CylinderGeometry(0.35, 0.45, 1.4, 24);
+        const centerCol = new THREE.Mesh(centerColGeo, stoneMat);
+        centerCol.position.y = 0.7; centerCol.castShadow = true;
+        fountainGroup.add(centerCol);
+
+        const bowlGeo = new THREE.CylinderGeometry(0.95, 0.3, 0.35, 32);
+        const bowl = new THREE.Mesh(bowlGeo, stoneMat);
+        bowl.position.y = 1.4; bowl.castShadow = true;
+        fountainGroup.add(bowl);
+
+        const waterMat = new THREE.MeshPhysicalMaterial({
+            color: 0x0088cc, roughness: 0.05, transmission: 0.85, opacity: 0.9, transparent: true,
+            ior: 1.333, reflectivity: 0.9, clearcoat: 1.0, clearcoatRoughness: 0.1
+        });
+
+        const water = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 2.2, 0.5, 48), waterMat);
+        water.position.y = 0.15; water.receiveShadow = true;
+        fountainGroup.add(water);
+
+        const topWater = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.85, 0.1, 32), waterMat);
+        topWater.position.y = 1.52;
+        fountainGroup.add(topWater);
+
+        const waterfallMat = new THREE.MeshBasicMaterial({ color: 0x80e5ff, transparent: true, opacity: 0.35, side: THREE.DoubleSide });
+        const waterfall = new THREE.Mesh(new THREE.CylinderGeometry(0.88, 0.92, 0.9, 32, 1, true), waterfallMat);
+        waterfall.position.y = 0.95;
+        fountainGroup.add(waterfall);
+
+        scene.add(fountainGroup);
+
+        // --- Σωματίδια & Εφέ ---
+        const particleCount = 400;
+        const particleGeo = new THREE.BufferGeometry();
+        const positions = new Float32Array(particleCount * 3);
+        const velocities = [];
+        for (let i = 0; i < particleCount; i++) {
+            positions[i * 3] = 0; positions[i * 3 + 1] = 1.6; positions[i * 3 + 2] = 0;
+            velocities.push({ x: (Math.random() - 0.5) * 0.04, y: 0.06 + Math.random() * 0.04, z: (Math.random() - 0.5) * 0.04 });
+        }
+        particleGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        const waterParticles = new THREE.Points(particleGeo, new THREE.PointsMaterial({ color: 0xcceeff, size: 0.05, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending }));
+        scene.add(waterParticles);
+
+        const ripples = [];
+        function createRippleEffect(x, z) {
+            const ring = new THREE.Mesh(new THREE.RingGeometry(0.05, 0.12, 32), new THREE.MeshBasicMaterial({ color: 0x80ffff, side: THREE.DoubleSide, transparent: true, opacity: 0.9 }));
+            ring.rotation.x = Math.PI / 2; ring.position.set(x, 0.41, z);
+            scene.add(ring);
+            ripples.push({ mesh: ring, scale: 1, opacity: 0.9 });
+        }
+
+        // --- Κέρματα & Αλληλεπίδραση ---
+        const coins = [];
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        let isDragging = false;
+        let pointerDownTime = 0;
+
+        window.addEventListener('pointerdown', () => { isDragging = false; pointerDownTime = Date.now(); });
+        window.addEventListener('pointermove', () => { isDragging = true; });
+        window.addEventListener('pointerup', (event) => {
+            if (Date.now() - pointerDownTime < 250 && (!isDragging || event.pointerType === 'touch')) onCoinClick(event);
+        });
+
+        function onCoinClick(event) {
+            if (event.target.tagName === 'INPUT' || event.target.tagName === 'BUTTON') return;
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(coins);
+            if (intersects.length > 0) showWishModal(intersects[0].object.userData.wishText);
+        }
+
+        function showWishModal(text) { document.getElementById('wishTextDisplay').innerText = `"${text}"`; document.getElementById('wishModal').classList.add('active'); }
+        function closeWishModal() { document.getElementById('wishModal').classList.remove('active'); }
+        function updateCounterUI(count) { const el = document.getElementById('wishCounter'); el.innerText = count; el.parentElement.style.transform = 'scale(1.15)'; setTimeout(()=>el.parentElement.style.transform='scale(1)', 200); }
+
+        function addStaticCoinToScene(wishText) {
+            const coinMat = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.95, roughness: 0.1 });
+            const coin = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.02, 20), coinMat);
+            coin.position.set((Math.random()-0.5)*1.6, 0.39, (Math.random()-0.5)*1.6);
+            coin.castShadow = true; coin.userData = { wishText: wishText };
+            fountainGroup.add(coin); coins.push(coin);
+        }
+
+        async function loadExistingWishes() {
+            try {
+                const res = await fetch(API_URL);
+                const wishes = await res.json();
+                wishes.forEach(wish => addStaticCoinToScene(wish.text));
+                updateCounterUI(wishes.length);
+            } catch (err) { console.error("Error loading wishes:", err); }
+        }
+        loadExistingWishes();
+
+        function animateFallingCoin(wishText) {
+            const coinMat = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.95, roughness: 0.1 });
+            const coin = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.02, 20), coinMat);
+            const start = new THREE.Vector3((Math.random()-0.5)*0.4, 4.8, 4.2);
+            const target = new THREE.Vector3((Math.random()-0.5)*1.6, 0.39, (Math.random()-0.5)*1.6);
+            coin.position.copy(start); coin.castShadow = true; coin.userData = { wishText: wishText };
+            fountainGroup.add(coin);
+
+            let progress = 0;
+            function fallStep() {
+                progress += 0.022;
+                if (progress < 1) {
+                    coin.position.x = start.x + (target.x - start.x) * progress;
+                    coin.position.z = start.z + (target.z - start.z) * progress;
+                    coin.position.y = start.y + (target.y - start.y) * progress + Math.sin(progress * Math.PI) * 1.4;
+                    coin.rotation.x += 0.25; coin.rotation.y += 0.18;
+                    requestAnimationFrame(fallStep);
+                } else {
+                    coin.position.copy(target); coin.rotation.set(0, Math.random()*Math.PI, 0);
+                    coins.push(coin); playSplashSound(); createRippleEffect(target.x, target.z); updateCounterUI(coins.length);
                 }
-                
-                // Κείμενο ευχής
-                const span = document.createElement('span');
-                span.className = 'wish-text';
-                span.textContent = wish.text;
-                li.appendChild(span);
-
-                // Περιοχή κουμπιών
-                const actionsDiv = document.createElement('div');
-                actionsDiv.className = 'actions';
-
-                // Κουμπί Εκπλήρωσης
-                const fulfillBtn = document.createElement('button');
-                fulfillBtn.className = 'btn-action btn-fulfill';
-                fulfillBtn.innerHTML = wish.isFulfilled ? '↩️' : '✅';
-                fulfillBtn.title = wish.isFulfilled ? 'Ακύρωση Εκπλήρωσης' : 'Εκπλήρωση Ευχής';
-                fulfillBtn.onclick = () => toggleFulfill(wish._id);
-                actionsDiv.appendChild(fulfillBtn);
-
-                // Κουμπί Διαγραφής
-                const deleteBtn = document.createElement('button');
-                deleteBtn.className = 'btn-action btn-delete';
-                deleteBtn.innerHTML = '🗑️';
-                deleteBtn.title = 'Διαγραφή Ευχής';
-                deleteBtn.onclick = () => deleteWish(wish._id);
-                actionsDiv.appendChild(deleteBtn);
-
-                li.appendChild(actionsDiv);
-                list.appendChild(li);
-            });
-        } catch (err) {
-            console.error('Σφάλμα κατά τη φορτώση των ευχών:', err);
+            }
+            fallStep();
         }
-    }
 
-    // 2. Προσθήκη νέας ευχής
-    async function addWish() {
-        const input = document.getElementById('wishInput');
-        const text = input.value.trim();
-        
-        if (!text) return alert('Παρακαλώ γράψε μια ευχή πριν ρίξεις το κέρμα!');
-
-        try {
-            const res = await fetch(API_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: text })
-            });
-
-            if (res.ok) {
+        async function throwCoin() {
+            const input = document.getElementById('wishInput');
+            const wishText = input.value.trim();
+            if (!wishText) return alert("Γράψε πρώτα μια ευχή!");
+            
+            animateFallingCoin(wishText);
+            
+            try {
+                await fetch(API_URL, {
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: wishText })
+                });
                 input.value = '';
-                fetchWishes();
+            } catch (err) { console.error("Error throwing coin:", err); }
+        }
+
+        // Enter Key Listener
+        document.getElementById('wishInput').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') throwCoin();
+        });
+
+        // --- Render Loop ---
+        const clock = new THREE.Clock();
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            const time = clock.getElapsedTime();
+
+            const pos = waterParticles.geometry.attributes.position.array;
+            for (let i = 0; i < particleCount; i++) {
+                pos[i*3] += velocities[i].x; pos[i*3+1] += velocities[i].y; pos[i*3+2] += velocities[i].z;
+                velocities[i].y -= 0.002;
+                if (pos[i*3+1] < 0.35) { pos[i*3] = 0; pos[i*3+1] = 1.6; pos[i*3+2] = 0; velocities[i].y = 0.06 + Math.random()*0.04; }
             }
-        } catch (err) {
-            console.error('Σφάλμα κατά την αποστολή:', err);
-        }
-    }
+            waterParticles.geometry.attributes.position.needsUpdate = true;
 
-    // Enter Key Handler
-    function handleKeyPress(event) {
-        if (event.key === 'Enter') {
-            addWish();
-        }
-    }
-
-    // 3. Εναλλαγή Κατάστασης Εκπλήρωσης (PUT)
-    async function toggleFulfill(id) {
-        try {
-            const res = await fetch(`${API_URL}/${id}`, {
-                method: 'PUT'
-            });
-
-            if (res.ok) {
-                fetchWishes();
+            for (let i = ripples.length-1; i>=0; i--) {
+                const r = ripples[i]; r.scale += 0.07; r.opacity -= 0.025;
+                r.mesh.scale.set(r.scale, r.scale, 1); r.mesh.material.opacity = r.opacity;
+                if (r.opacity <= 0) { scene.remove(r.mesh); ripples.splice(i, 1); }
             }
-        } catch (err) {
-            console.error('Σφάλμα κατά την εκπλήρωση:', err);
+
+            waterfall.material.opacity = 0.3 + Math.sin(time * 5) * 0.08;
+            water.rotation.y = time * 0.03;
+            coins.forEach(c => c.rotation.y += 0.008);
+            renderer.render(scene, camera);
         }
-    }
+        animate();
 
-    // 4. Διαγραφή ευχής (DELETE)
-    async function deleteWish(id) {
-        if (!confirm('Θέλεις σίγουρα να αφαίρεσεις αυτή την ευχή από το συντριβάνι;')) return;
-
-        try {
-            const res = await fetch(`${API_URL}/${id}`, {
-                method: 'DELETE'
-            });
-
-            if (res.ok) {
-                fetchWishes();
-            }
-        } catch (err) {
-            console.error('Σφάλμα κατά τη διαγραφή:', err);
-        }
-    }
-
-    // Εκκίνηση φόρτωσης ευχών
-    fetchWishes();
-</script>
-
+        window.addEventListener('resize', () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
+    </script>
 </body>
 </html>
