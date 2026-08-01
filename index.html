@@ -2,401 +2,337 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>✨ Neon Wishing Fountain 3D ✨</title>
-    <style>
-        body { margin: 0; overflow: hidden; background-color: #010409; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; transition: background-color 0.8s ease; touch-action: none; color: #e0f7fa; }
-        #canvas-container { width: 100vw; height: 100vh; }
-        
-        /* Fast Loader Screen */
-        #loader {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background: #010409; display: flex; flex-direction: column;
-            justify-content: center; align-items: center; z-index: 100;
-            transition: opacity 0.5s ease;
-        }
-        .spinner {
-            width: 50px; height: 50px; border: 3px solid rgba(0, 212, 255, 0.2);
-            border-top: 3px solid #00d4ff; border-radius: 50%;
-            animation: spin 1s linear infinite; box-shadow: 0 0 15px rgba(0,212,255,0.5);
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        #loader p { margin-top: 15px; color: #00d4ff; font-size: 14px; letter-spacing: 1px; }
-
-        /* UI Counter */
-        #counter-badge {
-            position: absolute; top: 20px; left: 20px;
-            background: rgba(10, 25, 47, 0.6); backdrop-filter: blur(15px);
-            border: 1px solid rgba(0, 212, 255, 0.5); padding: 10px 18px;
-            border-radius: 16px; color: #fff; font-size: 14px; font-weight: 600;
-            box-shadow: 0 0 15px rgba(0, 212, 255, 0.4); display: flex; align-items: center; gap: 8px;
-            z-index: 10; transition: all 0.5s ease; pointer-events: none;
-        }
-        #counter-badge span { color: #ffb703; font-size: 20px; font-weight: bold; text-shadow: 0 0 15px rgba(255,183,3,0.7); }
-
-        .top-right-controls {
-            position: absolute; top: 20px; right: 20px;
-            display: flex; gap: 10px; z-index: 10;
-        }
-
-        .ctrl-btn {
-            background: rgba(10, 25, 47, 0.6); backdrop-filter: blur(15px);
-            border: 1px solid rgba(255, 255, 255, 0.2); padding: 10px 16px;
-            border-radius: 20px; color: #fff; font-size: 13px; font-weight: bold;
-            cursor: pointer; transition: all 0.3s ease;
-            box-shadow: 0 0 10px rgba(255,255,255,0.1);
-        }
-        .ctrl-btn:hover { transform: scale(1.05); border-color: rgba(0, 212, 255, 0.6); box-shadow: 0 0 15px rgba(0, 212, 255, 0.4); }
-
-        #auth-btn { border-color: rgba(255, 183, 3, 0.6); color: #ffb703; box-shadow: 0 0 10px rgba(255, 183, 3, 0.3); }
-
-        #slogan {
-            position: absolute; top: 85px; left: 50%; transform: translateX(-50%);
-            background: rgba(10, 25, 47, 0.4); backdrop-filter: blur(10px);
-            padding: 8px 30px; border-radius: 25px; color: #e0f7fa;
-            font-size: 16px; font-style: italic; font-weight: 300; letter-spacing: 1.5px;
-            text-shadow: 0 0 20px rgba(0, 212, 255, 0.8), 0 0 10px rgba(0, 212, 255, 0.5);
-            z-index: 5; pointer-events: none; transition: all 0.5s ease; white-space: nowrap;
-        }
-
-        #ui {
-            position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%);
-            display: flex; gap: 10px; background: rgba(10, 25, 47, 0.7);
-            padding: 10px 15px; border-radius: 35px; backdrop-filter: blur(15px);
-            box-shadow: 0 0 25px rgba(0, 212, 255, 0.5); border: 1px solid rgba(0, 212, 255, 0.3);
-            z-index: 10; transition: all 0.5s ease; max-width: 90vw;
-        }
-        input {
-            padding: 12px 20px; border-radius: 25px; border: 1px solid rgba(0, 212, 255, 0.3); outline: none;
-            width: 220px; font-size: 15px; background: rgba(1, 4, 9, 0.8); color: #fff;
-            transition: all 0.3s ease; box-shadow: inset 0 0 5px rgba(0, 212, 255, 0.2);
-        }
-        input:focus { border-color: #00d4ff; box-shadow: 0 0 15px rgba(0, 212, 255, 0.6), inset 0 0 10px rgba(0, 212, 255, 0.3); }
-        
-        button.throw-btn {
-            padding: 12px 22px; border-radius: 25px; border: none;
-            background: linear-gradient(135deg, #ffb703, #fb8500); color: #000;
-            font-weight: bold; font-size: 15px; cursor: pointer; transition: all 0.2s;
-            box-shadow: 0 0 15px rgba(255, 183, 3, 0.6); white-space: nowrap; text-shadow: 0 0 5px rgba(255,255,255,0.5);
-        }
-        button.throw-btn:hover { transform: translateY(-2px) scale(1.02); box-shadow: 0 0 25px rgba(255, 183, 3, 0.9); }
-
-        /* Modals Style */
-        .modal {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.8);
-            background: rgba(10, 25, 47, 0.95); backdrop-filter: blur(25px);
-            border: 2px solid #00d4ff; padding: 30px 35px; border-radius: 20px;
-            color: #fff; text-align: center; box-shadow: 0 0 40px rgba(0, 212, 255, 0.6);
-            opacity: 0; pointer-events: none; transition: all 0.3s ease; z-index: 20; width: 300px; max-width: 85vw;
-        }
-        .modal.active { opacity: 1; pointer-events: auto; transform: translate(-50%, -50%) scale(1); }
-        .modal h3 { margin: 0 0 15px 0; color: #00d4ff; font-size: 20px; text-shadow: 0 0 10px rgba(0,212,255,0.7); }
-        .modal input { width: 80%; margin-bottom: 12px; display: block; margin-left: auto; margin-right: auto; }
-        .modal button.submit-btn { margin-top: 10px; width: 90%; padding: 12px; font-size: 15px; background: linear-gradient(135deg, #00d4ff, #0088cc); color: #000; border: none; border-radius: 20px; font-weight: bold; cursor: pointer; box-shadow: 0 0 15px rgba(0,212,255,0.5); }
-        .modal .switch-link { margin-top: 15px; font-size: 12px; color: #ffb703; cursor: pointer; text-decoration: underline; }
-        .close-btn { position: absolute; top: 10px; right: 15px; color: #aaa; font-size: 18px; cursor: pointer; }
-
-        #wishModal { border-color: #ffb703; box-shadow: 0 0 40px rgba(255, 183, 3, 0.6); }
-        #wishModal h3 { color: #ffb703; text-shadow: 0 0 10px rgba(255,183,3,0.7); }
-    </style>
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Wishing Fountain</title>
+    <!-- Three.js & Controls -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; }
+
+        body {
+            background-color: #050508;
+            color: #fff;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        #canvas-container {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 1;
+        }
+
+        /* Top Navigation Overlay */
+        .top-bar {
+            position: absolute;
+            top: 20px;
+            width: 100%;
+            padding: 0 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .badge {
+            background: rgba(10, 15, 25, 0.7);
+            border: 1px solid rgba(0, 243, 255, 0.4);
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.2);
+            padding: 8px 18px;
+            border-radius: 20px;
+            font-size: 0.95rem;
+            color: #ffcc00;
+            font-weight: 600;
+            backdrop-filter: blur(8px);
+        }
+
+        .top-right-controls {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn-neon {
+            background: rgba(15, 12, 5, 0.8);
+            border: 1px solid #ffaa00;
+            color: #ffaa00;
+            padding: 8px 18px;
+            border-radius: 20px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.3s;
+            box-shadow: 0 0 10px rgba(255, 170, 0, 0.2);
+            backdrop-filter: blur(8px);
+        }
+
+        .btn-neon:hover {
+            background: #ffaa00;
+            color: #000;
+            box-shadow: 0 0 20px rgba(255, 170, 0, 0.6);
+        }
+
+        /* Floating Wish Prompt */
+        .prompt-title {
+            position: absolute;
+            top: 15%;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            background: rgba(10, 15, 25, 0.6);
+            border: 1px solid rgba(0, 243, 255, 0.2);
+            padding: 10px 25px;
+            border-radius: 25px;
+            color: #8fa0be;
+            font-style: italic;
+            letter-spacing: 1px;
+            backdrop-filter: blur(5px);
+            pointer-events: none;
+        }
+
+        /* Bottom Input Bar */
+        .bottom-bar {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 550px;
+            background: rgba(8, 12, 20, 0.75);
+            border: 1px solid rgba(0, 243, 255, 0.5);
+            box-shadow: 0 0 25px rgba(0, 243, 255, 0.3);
+            border-radius: 30px;
+            padding: 6px;
+            display: flex;
+            align-items: center;
+            backdrop-filter: blur(10px);
+            z-index: 10;
+        }
+
+        .bottom-bar input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            padding: 10px 20px;
+            color: #fff;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        .bottom-bar input::placeholder {
+            color: #6a7b95;
+        }
+
+        .btn-throw {
+            background: linear-gradient(90deg, #ff9900, #ffbb00);
+            border: none;
+            color: #000;
+            font-weight: bold;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(255, 153, 0, 0.5);
+            transition: 0.3s;
+            white-space: nowrap;
+        }
+
+        .btn-throw:hover {
+            transform: scale(1.03);
+            box-shadow: 0 0 25px rgba(255, 153, 0, 0.8);
+        }
+
+        /* Modal Auth Styling */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .modal-content {
+            background: #0d1322;
+            border: 1px solid rgba(0, 243, 255, 0.3);
+            box-shadow: 0 0 30px rgba(0, 243, 255, 0.2);
+            padding: 30px;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 380px;
+            position: relative;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 12px; right: 18px;
+            color: #aaa;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-size: 0.85rem; color: #8fa0be; }
+        .form-group input {
+            width: 100%; padding: 10px; background: #050811;
+            border: 1px solid rgba(0, 243, 255, 0.2); border-radius: 8px; color: #fff; outline: none;
+        }
+        .form-group input:focus { border-color: #00f3ff; }
+
+        .btn-submit-modal {
+            width: 100%; padding: 12px;
+            background: linear-gradient(90deg, #00f3ff, #0077ff);
+            border: none; border-radius: 8px; color: #fff; font-weight: bold; cursor: pointer;
+        }
+    </style>
 </head>
 <body>
-    <div id="loader">
-        <div class="spinner"></div>
-        <p>Awakening the Fountain...</p>
+
+    <!-- Top Navigation -->
+    <div class="top-bar">
+        <div class="badge" id="wishCounter">✨ Wishes: 0</div>
+        <div class="top-right-controls" id="authSection">
+            <button class="btn-neon" onclick="openModal('login')">🔑 Login / Sign Up</button>
+            <button class="btn-neon" style="border-color:#555; color:#aaa;">☀️ Day / 🌙 Night</button>
+        </div>
     </div>
 
+    <!-- Center Prompt -->
+    <div class="prompt-title">Make your wish come true...</div>
+
+    <!-- 3D Canvas -->
     <div id="canvas-container"></div>
-    
-    <div id="counter-badge">
-        ✨ Wishes: <span id="wishCounter">0</span>
-    </div>
 
-    <div id="slogan">Make your wish come true...</div>
-
-    <div class="top-right-controls">
-        <button id="auth-btn" class="ctrl-btn" onclick="openAuthModal()">🔑 Login / Sign Up</button>
-        <button id="theme-toggle" class="ctrl-btn" onclick="toggleDayNight()">☀️ Day / 🌙 Night</button>
-    </div>
-
-    <div id="ui">
-        <input type="text" id="wishInput" placeholder="Write a wish...">
-        <button class="throw-btn" onclick="handleWishSubmit()">Throw € (1€)</button>
-    </div>
+    <!-- Bottom Input Bar -->
+    <form class="bottom-bar" id="wishForm">
+        <input type="text" id="wishInput" placeholder="Write a wish..." required>
+        <button type="submit" class="btn-throw">Throw € (1€)</button>
+    </form>
 
     <!-- Auth Modal -->
-    <div id="authModal" class="modal">
-        <span class="close-btn" onclick="closeAuthModal()">✕</span>
-        <h3 id="authTitle">Sign In</h3>
-        <input type="text" id="authUsername" placeholder="Username">
-        <input type="password" id="authPassword" placeholder="Password">
-        <button class="submit-btn" onclick="submitAuth()" id="authSubmitBtn">Login</button>
-        <div class="switch-link" id="authSwitch" onclick="toggleAuthMode()">Don't have an account? Sign Up</div>
-    </div>
-
-    <!-- Wish Display Modal -->
-    <div id="wishModal" class="modal">
-        <h3>✨ A wish revealed:</h3>
-        <p id="wishTextDisplay" style="font-size: 18px; font-style: italic; margin: 15px 0; color: #e0f7fa;">"..."</p>
-        <button class="submit-btn" style="background: linear-gradient(135deg, #ffb703, #fb8500);" onclick="closeWishModal()">Close</button>
+    <div class="modal" id="authModal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal()">&times;</span>
+            <h2 id="modalTitle" style="margin-bottom:20px; color:#00f3ff;">Login</h2>
+            <form id="authForm">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="username" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="password" required>
+                </div>
+                <button type="submit" class="btn-submit-modal" id="modalSubmitBtn">Login</button>
+            </form>
+            <p style="margin-top:15px; font-size:0.8rem; text-align:center; color:#8fa0be; cursor:pointer;" onclick="toggleAuthMode()" id="toggleAuthText">
+                Don't have an account? Sign Up
+            </p>
+        </div>
     </div>
 
     <script>
         const API_URL = 'https://fountain-backend-mgxf.onrender.com/api';
-        let currentUser = null;
-        let isSignUpMode = false;
+        let authMode = 'login';
+        let currentUser = JSON.parse(localStorage.getItem('user')) || null;
 
-        // Auth Logic
-        function openAuthModal() { document.getElementById('authModal').classList.add('active'); }
-        function closeAuthModal() { document.getElementById('authModal').classList.remove('active'); }
-
-        function toggleAuthMode() {
-            isSignUpMode = !isSignUpMode;
-            document.getElementById('authTitle').innerText = isSignUpMode ? "Create Account" : "Sign In";
-            document.getElementById('authSubmitBtn').innerText = isSignUpMode ? "Sign Up" : "Login";
-            document.getElementById('authSwitch').innerText = isSignUpMode ? "Already have an account? Sign In" : "Don't have an account? Sign Up";
-        }
-
-        async function submitAuth() {
-            const username = document.getElementById('authUsername').value.trim();
-            const password = document.getElementById('authPassword').value.trim();
-
-            if (!username || !password) return alert("Please fill in all fields.");
-
-            const endpoint = isSignUpMode ? '/auth/signup' : '/auth/login';
-
-            try {
-                const res = await fetch(API_URL + endpoint, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
-                });
-
-                const data = await res.json();
-                if (!res.ok) return alert(data.message || "Authentication failed.");
-
-                localStorage.setItem('fountain_token', data.token);
-                currentUser = data.user;
-                updateUserUI();
-                closeAuthModal();
-                alert(isSignUpMode ? "Account created successfully!" : "Logged in successfully!");
-            } catch (err) {
-                console.error("Auth Error:", err);
-                alert("Server error. Please try again.");
-            }
-        }
-
-        function updateUserUI() {
-            const authBtn = document.getElementById('auth-btn');
-            const token = localStorage.getItem('fountain_token');
-            if (token) {
-                authBtn.innerText = "👤 Account";
-                authBtn.style.borderColor = "#00d4ff";
-                authBtn.style.color = "#00d4ff";
-            } else {
-                authBtn.innerText = "🔑 Login / Sign Up";
-                authBtn.style.borderColor = "#ffb703";
-                authBtn.style.color = "#ffb703";
-            }
-        }
-
-        async function handleWishSubmit() {
-            const wishText = document.getElementById('wishInput').value.trim();
-            if (!wishText) return alert("Please write a wish first!");
-
-            try {
-                const res = await fetch(API_URL + '/wishes', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ text: wishText, isPublic: true })
-                });
-
-                if (res.ok) {
-                    playSplashSound();
-                    spawn3DCoin(wishText);
-                    document.getElementById('wishInput').value = '';
-                    loadExistingWishes();
-                } else {
-                    alert("Error saving your wish.");
-                }
-            } catch (err) {
-                console.error("Wish Submit Error:", err);
-            }
-        }
-
-        // --- Sound Engine ---
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        function playSplashSound() {
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.connect(gain); gain.connect(audioCtx.destination);
-            osc.type = 'triangle'; osc.frequency.setValueAtTime(150, audioCtx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + 0.3);
-            gain.gain.setValueAtTime(0.8, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.35);
-            osc.start(); osc.stop(audioCtx.currentTime + 0.35);
-        }
-
-        function toggleDayNight() {}
-
-        // --- 3D SCENE SETUP ---
+        // --- 1. THREE.JS SCENE SETUP ---
+        const container = document.getElementById('canvas-container');
         const scene = new THREE.Scene();
-        scene.fog = new THREE.FogExp2(0x010409, 0.03);
-        const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 4.5, 7.5);
-        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        scene.fog = new THREE.FogExp2(0x050508, 0.025);
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 5, 11);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        document.getElementById('canvas-container').appendChild(renderer.domElement);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        container.appendChild(renderer.domElement);
 
         const controls = new THREE.OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true; controls.target.set(0, 0.8, 0);
+        controls.enableDamping = true;
+        controls.maxPolarAngle = Math.PI / 2 - 0.05;
 
-        const ambientLight = new THREE.AmbientLight(0x0a192f, 1.5); scene.add(ambientLight);
-        const mainDirLight = new THREE.DirectionalLight(0xfff5ea, 2.0); mainDirLight.position.set(5, 10, 5); scene.add(mainDirLight);
-        const poolLight = new THREE.PointLight(0x00d4ff, 8, 12); poolLight.position.set(0, 1.2, 0); scene.add(poolLight);
+        // Lights
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
+        scene.add(ambientLight);
 
-        // --- 2-TIER FOUNTAIN MESH ---
-        const fountainGroup = new THREE.Group();
-        const stoneMat = new THREE.MeshStandardMaterial({ color: 0x2b3036, roughness: 0.8 });
-        const waterMat = new THREE.MeshPhysicalMaterial({ color: 0x0088cc, roughness: 0.01, transmission: 0.85, transparent: true });
+        const cyanLight = new THREE.PointLight(0x00f3ff, 3, 15);
+        cyanLight.position.set(0, 1, 0);
+        scene.add(cyanLight);
 
-        // Base Pool
-        const basePool = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 2.8, 0.8, 48), stoneMat);
-        const baseWater = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 2.4, 0.5, 48), waterMat);
-        baseWater.position.y = 0.15;
-        fountainGroup.add(basePool);
-        fountainGroup.add(baseWater);
+        // Fountain 3D Geometry
+        const darkMetal = new THREE.MeshStandardMaterial({ color: 0x222831, roughness: 0.4 });
+        const glowingWater = new THREE.MeshStandardMaterial({ color: 0x00f3ff, transparent: true, opacity: 0.8, roughness: 0.1 });
 
-        // Middle Pillar
-        const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.5, 1.4, 32), stoneMat);
-        pillar.position.y = 1.0;
-        fountainGroup.add(pillar);
+        // Base & Pool
+        const base = new THREE.Mesh(new THREE.CylinderGeometry(3.5, 4, 0.8, 32), darkMetal);
+        base.position.y = -1;
+        scene.add(base);
 
-        // Top Tier
-        const topTier = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.1, 0.2, 48), stoneMat);
-        topTier.position.y = 1.7;
-        const topWater = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 0.1, 48), waterMat);
-        topWater.position.y = 1.8;
-        fountainGroup.add(topTier);
-        fountainGroup.add(topWater);
+        const poolWater = new THREE.Mesh(new THREE.CylinderGeometry(3.3, 3.3, 0.6, 32), glowingWater);
+        poolWater.position.y = -0.8;
+        scene.add(poolWater);
 
-        scene.add(fountainGroup);
+        // Center Pillar & Bowl
+        const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.6, 1.8, 16), darkMetal);
+        pillar.position.y = 0.1;
+        scene.add(pillar);
 
-        // --- WATER PARTICLES ---
-        const particleCount = 250;
-        const particleGeo = new THREE.BufferGeometry();
-        const particlePositions = new Float32Array(particleCount * 3);
-        const particleVelocities = [];
+        const bowl = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.8, 0.3, 32), darkMetal);
+        bowl.position.y = 1.0;
+        scene.add(bowl);
 
-        for (let i = 0; i < particleCount; i++) {
-            particlePositions[i * 3] = (Math.random() - 0.5) * 0.3;
-            particlePositions[i * 3 + 1] = 1.8 + Math.random() * 0.5;
-            particlePositions[i * 3 + 2] = (Math.random() - 0.5) * 0.3;
+        const bowlWater = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 0.2, 32), glowingWater);
+        bowlWater.position.y = 1.1;
+        scene.add(bowlWater);
 
-            particleVelocities.push({
+        // Particle System (Water Spray)
+        const pCount = 350;
+        const pGeo = new THREE.BufferGeometry();
+        const pPos = new Float32Array(pCount * 3);
+        const pVelo = [];
+
+        for (let i = 0; i < pCount; i++) {
+            pPos[i * 3] = (Math.random() - 0.5) * 0.2;
+            pPos[i * 3 + 1] = 1.2;
+            pPos[i * 3 + 2] = (Math.random() - 0.5) * 0.2;
+
+            pVelo.push({
                 x: (Math.random() - 0.5) * 0.04,
-                y: Math.random() * 0.05 + 0.04,
+                y: Math.random() * 0.07 + 0.04,
                 z: (Math.random() - 0.5) * 0.04
             });
         }
 
-        particleGeo.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
-        const particleMat = new THREE.PointsMaterial({
-            color: 0xffffff,
-            size: 0.06,
-            transparent: true,
-            opacity: 0.85
-        });
-        const waterParticles = new THREE.Points(particleGeo, particleMat);
-        scene.add(waterParticles);
-
-        function animateWaterParticles() {
-            const positions = waterParticles.geometry.attributes.position.array;
-            for (let i = 0; i < particleCount; i++) {
-                positions[i * 3] += particleVelocities[i].x;
-                positions[i * 3 + 1] += particleVelocities[i].y;
-                positions[i * 3 + 2] += particleVelocities[i].z;
-
-                particleVelocities[i].y -= 0.002;
-
-                if (positions[i * 3 + 1] <= 0.3) {
-                    positions[i * 3] = (Math.random() - 0.5) * 0.2;
-                    positions[i * 3 + 1] = 1.85;
-                    positions[i * 3 + 2] = (Math.random() - 0.5) * 0.2;
-                    particleVelocities[i].y = Math.random() * 0.05 + 0.04;
-                }
-            }
-            waterParticles.geometry.attributes.position.needsUpdate = true;
-        }
-
-        // --- COINS IN FOUNTAIN ---
-        const coins = [];
-        const coinGeo = new THREE.CylinderGeometry(0.1, 0.1, 0.02, 16);
-        const coinMat = new THREE.MeshStandardMaterial({ color: 0xffb703, metalness: 0.8, roughness: 0.2 });
-
-        function spawn3DCoin(wishText) {
-            const coin = new THREE.Mesh(coinGeo, coinMat);
-            const angle = Math.random() * Math.PI * 2;
-            const radius = Math.random() * 1.8;
-            coin.position.set(Math.cos(angle) * radius, 0.35, Math.sin(angle) * radius);
-            coin.rotation.x = Math.PI / 2;
-            coin.userData = { wishText };
-            scene.add(coin);
-            coins.push(coin);
-        }
-
-        // --- FETCH EXISTING WISHES FROM BACKEND ---
-        async function loadExistingWishes() {
-            try {
-                const res = await fetch(API_URL + '/wishes');
-                if (res.ok) {
-                    const wishes = await res.json();
-                    document.getElementById('wishCounter').innerText = wishes.length;
-
-                    coins.forEach(c => scene.remove(c));
-                    coins.length = 0;
-
-                    wishes.forEach(w => spawn3DCoin(w.text));
-                }
-            } catch (err) {
-                console.error("Error loading wishes:", err);
-            }
-
-            setTimeout(() => {
-                const loader = document.getElementById('loader');
-                if (loader) {
-                    loader.style.opacity = '0';
-                    setTimeout(() => loader.remove(), 500);
-                }
-            }, 300);
-            updateUserUI();
-        }
-
-        function showWishModal(text) { document.getElementById('wishTextDisplay').innerText = `"${text}"`; document.getElementById('wishModal').classList.add('active'); }
-        function closeWishModal() { document.getElementById('wishModal').classList.remove('active'); }
-
-        const raycaster = new THREE.Raycaster();
-        const mouse = new THREE.Vector2();
-        window.addEventListener('click', (e) => {
-            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-            raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObjects(coins);
-            if (intersects.length > 0) {
-                const wishText = intersects[0].object.userData.wishText;
-                if (wishText) showWishModal(wishText);
-            }
-        });
-
-        loadExistingWishes();
+        pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+        const pMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.08, transparent: true, opacity: 0.9 });
+        const particles = new THREE.Points(pGeo, pMat);
+        scene.add(particles);
 
         function animate() {
             requestAnimationFrame(animate);
-            animateWaterParticles();
+
+            const pos = particles.geometry.attributes.position.array;
+            for (let i = 0; i < pCount; i++) {
+                pos[i * 3] += pVelo[i].x;
+                pos[i * 3 + 1] += pVelo[i].y;
+                pos[i * 3 + 2] += pVelo[i].z;
+                pVelo[i].y -= 0.0025;
+
+                if (pos[i * 3 + 1] < -0.6) {
+                    pos[i * 3] = (Math.random() - 0.5) * 0.2;
+                    pos[i * 3 + 1] = 1.2;
+                    pos[i * 3 + 2] = (Math.random() - 0.5) * 0.2;
+                    pVelo[i].y = Math.random() * 0.07 + 0.04;
+                }
+            }
+            particles.geometry.attributes.position.needsUpdate = true;
+
             controls.update();
             renderer.render(scene, camera);
         }
@@ -406,6 +342,100 @@
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // --- 2. AUTH & APP LOGIC ---
+        updateAuthUI();
+        loadWishes();
+
+        function updateAuthUI() {
+            const authSection = document.getElementById('authSection');
+            if (currentUser) {
+                authSection.innerHTML = `
+                    <span style="color: #00f3ff; font-weight:600; align-self:center;">👤 ${currentUser.username}</span>
+                    <button class="btn-neon" onclick="logout()" style="border-color:#ff4757; color:#ff4757;">Logout</button>
+                `;
+            } else {
+                authSection.innerHTML = `
+                    <button class="btn-neon" onclick="openModal('login')">🔑 Login / Sign Up</button>
+                `;
+            }
+        }
+
+        function openModal(mode) {
+            authMode = mode;
+            document.getElementById('modalTitle').innerText = mode === 'login' ? 'Login' : 'Sign Up';
+            document.getElementById('modalSubmitBtn').innerText = mode === 'login' ? 'Login' : 'Sign Up';
+            document.getElementById('toggleAuthText').innerText = mode === 'login' ? "Don't have an account? Sign Up" : "Already have an account? Login";
+            document.getElementById('authModal').style.display = 'flex';
+        }
+
+        function toggleAuthMode() {
+            openModal(authMode === 'login' ? 'signup' : 'login');
+        }
+
+        function closeModal() { document.getElementById('authModal').style.display = 'none'; }
+
+        document.getElementById('authForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const endpoint = authMode === 'login' ? '/auth/login' : '/auth/signup';
+
+            try {
+                const res = await fetch(`${API_URL}${endpoint}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.message || 'Authentication failed');
+
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('user', JSON.stringify(data.user));
+                currentUser = data.user;
+
+                updateAuthUI();
+                closeModal();
+                alert(`Welcome ${currentUser.username}!`);
+            } catch (err) { alert(err.message); }
+        });
+
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            currentUser = null;
+            updateAuthUI();
+        }
+
+        async function loadWishes() {
+            try {
+                const res = await fetch(`${API_URL}/wishes`);
+                const wishes = await res.json();
+                if (Array.isArray(wishes)) {
+                    document.getElementById('wishCounter').innerText = `✨ Wishes: ${wishes.length}`;
+                }
+            } catch (err) { console.log('Backend sync pending...'); }
+        }
+
+        document.getElementById('wishForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const text = document.getElementById('wishInput').value;
+
+            try {
+                const wishRes = await fetch(`${API_URL}/wishes`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text, userId: currentUser ? currentUser.id : null })
+                });
+
+                if (!wishRes.ok) throw new Error('Failed to send wish');
+
+                document.getElementById('wishInput').value = '';
+                alert('✨ Your wish has been tossed into the fountain!');
+                loadWishes();
+            } catch (err) { alert('Error: ' + err.message); }
         });
     </script>
 </body>
