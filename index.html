@@ -79,44 +79,38 @@
 
         .prompt-title {
             position: absolute;
-            top: 12%;
+            top: 10%;
             left: 50%;
             transform: translateX(-50%);
             z-index: 10;
             background: rgba(10, 15, 25, 0.6);
             border: 1px solid rgba(0, 243, 255, 0.2);
-            padding: 10px 25px;
+            padding: 8px 20px;
             border-radius: 25px;
             color: #8fa0be;
             font-style: italic;
             letter-spacing: 1px;
             backdrop-filter: blur(5px);
             pointer-events: none;
-        }
-
-        .bottom-bar-container {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 90%;
-            max-width: 600px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            z-index: 10;
+            font-size: 0.9rem;
         }
 
         .bottom-bar {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 550px;
             background: rgba(8, 12, 20, 0.85);
             border: 1px solid rgba(0, 243, 255, 0.5);
             box-shadow: 0 0 25px rgba(0, 243, 255, 0.3);
             border-radius: 30px;
-            padding: 8px 15px;
+            padding: 6px 12px;
             display: flex;
             align-items: center;
-            justify-content: space-between;
             backdrop-filter: blur(10px);
+            z-index: 10;
         }
 
         .bottom-bar input[type="text"] {
@@ -160,54 +154,56 @@
             box-shadow: 0 0 25px rgba(255, 153, 0, 0.8);
         }
 
-        /* Wishes Drawer / List */
-        .wishes-drawer {
-            max-height: 180px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            padding-right: 5px;
+        /* 3D COIN TOOLTIP POPUP */
+        #coinTooltip {
+            position: absolute;
+            display: none;
+            background: rgba(10, 15, 28, 0.95);
+            border: 1px solid #00f3ff;
+            box-shadow: 0 0 20px rgba(0, 243, 255, 0.4);
+            padding: 12px 16px;
+            border-radius: 12px;
+            color: #fff;
+            z-index: 50;
+            pointer-events: auto;
+            max-width: 260px;
+            backdrop-filter: blur(8px);
+            transform: translate(-50%, -100%);
         }
 
-        .wish-card {
-            background: rgba(13, 19, 34, 0.85);
-            border-left: 4px solid #00f3ff;
-            padding: 10px 15px;
-            border-radius: 8px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            backdrop-filter: blur(5px);
-            font-size: 0.9rem;
+        #coinTooltip .wish-text {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 4px;
         }
 
-        .wish-card.fulfilled {
-            border-left-color: #00ff88;
-            opacity: 0.8;
-        }
-
-        .wish-meta {
+        #coinTooltip .wish-author {
             font-size: 0.75rem;
             color: #8fa0be;
-            margin-top: 3px;
+            margin-bottom: 8px;
         }
 
-        .wish-actions {
+        #coinTooltip .actions {
             display: flex;
             gap: 6px;
         }
 
-        .action-btn {
-            background: rgba(255,255,255,0.1);
-            border: none;
-            color: #fff;
-            padding: 4px 8px;
+        .tooltip-btn {
+            background: rgba(0, 243, 255, 0.15);
+            border: 1px solid #00f3ff;
+            color: #00f3ff;
+            padding: 3px 8px;
             border-radius: 4px;
-            cursor: pointer;
             font-size: 0.75rem;
+            cursor: pointer;
         }
-        .action-btn:hover { background: rgba(255,255,255,0.25); }
+
+        .tooltip-btn.delete {
+            border-color: #ff4757;
+            color: #ff4757;
+            background: rgba(255, 71, 87, 0.15);
+        }
 
         /* Modal Styles */
         .modal {
@@ -282,23 +278,25 @@
         </div>
     </div>
 
-    <div class="prompt-title">Make your wish come true...</div>
+    <div class="prompt-title">Hover / Click on a coin inside the fountain to view the wish 🪙</div>
     <div id="canvas-container"></div>
 
-    <!-- Bottom Controls & Wish List -->
-    <div class="bottom-bar-container">
-        <div class="wishes-drawer" id="wishesContainer"></div>
-
-        <form class="bottom-bar" id="wishForm">
-            <input type="text" id="wishInput" placeholder="Write a wish..." required>
-            
-            <label class="checkbox-container">
-                <input type="checkbox" id="isPublicCheckbox" checked> Public
-            </label>
-
-            <button type="submit" class="btn-throw">Throw € (1€)</button>
-        </form>
+    <!-- COIN TOOLTIP POPUP -->
+    <div id="coinTooltip">
+        <div class="wish-text" id="ttText">Wish text...</div>
+        <div class="wish-author" id="ttAuthor">By: Anonymous</div>
+        <div class="actions" id="ttActions"></div>
     </div>
+
+    <form class="bottom-bar" id="wishForm">
+        <input type="text" id="wishInput" placeholder="Write a wish..." required>
+        
+        <label class="checkbox-container">
+            <input type="checkbox" id="isPublicCheckbox" checked> Public
+        </label>
+
+        <button type="submit" class="btn-throw">Throw € (1€)</button>
+    </form>
 
     <!-- Auth Modal -->
     <div class="modal" id="authModal">
@@ -339,6 +337,8 @@
         const API_URL = 'https://fountain-backend-mgxf.onrender.com/api';
         let authMode = 'login';
         let currentUser = JSON.parse(localStorage.getItem('user')) || null;
+        let wishCoins = []; // Array of { mesh, data }
+        let selectedWish = null;
 
         // THREE.JS SCENE SETUP
         const container = document.getElementById('canvas-container');
@@ -357,15 +357,20 @@
         controls.enableDamping = true;
         controls.maxPolarAngle = Math.PI / 2 - 0.05;
 
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
         scene.add(ambientLight);
 
         const cyanLight = new THREE.PointLight(0x00f3ff, 3, 15);
         cyanLight.position.set(0, 1, 0);
         scene.add(cyanLight);
 
+        const goldLight = new THREE.PointLight(0xffaa00, 2, 10);
+        goldLight.position.set(0, -0.2, 0);
+        scene.add(goldLight);
+
         const darkMetal = new THREE.MeshStandardMaterial({ color: 0x222831, roughness: 0.4 });
-        const glowingWater = new THREE.MeshStandardMaterial({ color: 0x00f3ff, transparent: true, opacity: 0.8, roughness: 0.1 });
+        const glowingWater = new THREE.MeshStandardMaterial({ color: 0x00f3ff, transparent: true, opacity: 0.75, roughness: 0.1 });
+        const goldMaterial = new THREE.MeshStandardMaterial({ color: 0xffcc00, metalness: 0.8, roughness: 0.2 });
 
         const base = new THREE.Mesh(new THREE.CylinderGeometry(3.5, 4, 0.8, 32), darkMetal);
         base.position.y = -1;
@@ -387,6 +392,7 @@
         bowlWater.position.y = 1.1;
         scene.add(bowlWater);
 
+        // WATER PARTICLES
         const pCount = 350;
         const pGeo = new THREE.BufferGeometry();
         const pPos = new Float32Array(pCount * 3);
@@ -409,6 +415,66 @@
         const particles = new THREE.Points(pGeo, pMat);
         scene.add(particles);
 
+        // RAYCASTER FOR COIN HOVER / CLICK
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        const tooltip = document.getElementById('coinTooltip');
+
+        window.addEventListener('mousemove', onPointerMove);
+
+        function onPointerMove(event) {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(wishCoins.map(c => c.mesh));
+
+            if (intersects.length > 0) {
+                const hitCoin = wishCoins.find(c => c.mesh === intersects[0].object);
+                if (hitCoin) {
+                    showTooltip(hitCoin, event.clientX, event.clientY);
+                    document.body.style.cursor = 'pointer';
+                    return;
+                }
+            }
+
+            if (!tooltip.contains(event.target)) {
+                hideTooltip();
+                document.body.style.cursor = 'default';
+            }
+        }
+
+        function showTooltip(coinObj, mouseX, mouseY) {
+            selectedWish = coinObj.data;
+            document.getElementById('ttText').innerText = selectedWish.text;
+            document.getElementById('ttAuthor').innerText = `By: ${selectedWish.username || 'Anonymous'} ${selectedWish.isFulfilled ? '• ✨ Fulfilled' : ''}`;
+
+            const isOwner = currentUser && (selectedWish.username === currentUser.username || selectedWish.userId === currentUser.id);
+            const actionsDiv = document.getElementById('ttActions');
+            actionsDiv.innerHTML = '';
+
+            if (isOwner) {
+                actionsDiv.innerHTML = `
+                    <button class="tooltip-btn" onclick="toggleFulfilled('${selectedWish._id}', ${selectedWish.isFulfilled})">${selectedWish.isFulfilled ? '⏳ Reset' : '✨ Fulfill'}</button>
+                    <button class="tooltip-btn delete" onclick="deleteWish('${selectedWish._id}')">🗑️ Delete</button>
+                `;
+            }
+
+            // Project 3D coin position to 2D screen coordinates
+            const coinPos = coinObj.mesh.position.clone();
+            coinPos.project(camera);
+            const x = (coinPos.x * .5 + .5) * window.innerWidth;
+            const y = (-(coinPos.y * .5) + .5) * window.innerHeight;
+
+            tooltip.style.left = `${x}px`;
+            tooltip.style.top = `${y - 15}px`;
+            tooltip.style.display = 'block';
+        }
+
+        function hideTooltip() {
+            tooltip.style.display = 'none';
+        }
+
         function animate() {
             requestAnimationFrame(animate);
 
@@ -427,6 +493,11 @@
                 }
             }
             particles.geometry.attributes.position.needsUpdate = true;
+
+            // Slowly rotate coins in pool
+            wishCoins.forEach(c => {
+                c.mesh.rotation.y += 0.01;
+            });
 
             controls.update();
             renderer.render(scene, camera);
@@ -528,42 +599,45 @@
             loadWishes();
         }
 
-        // LOAD AND RENDER WISHES
+        // LOAD WISHES AND CREATE 3D COINS
         async function loadWishes() {
             try {
                 const res = await fetch(`${API_URL}/wishes`);
                 const wishes = await res.json();
                 if (Array.isArray(wishes)) {
                     document.getElementById('wishCounter').innerText = `✨ Wishes: ${wishes.length}`;
-                    renderWishes(wishes);
+                    spawn3DCoins(wishes);
                 }
             } catch (err) { console.log('Backend sync pending...'); }
         }
 
-        function renderWishes(wishes) {
-            const container = document.getElementById('wishesContainer');
-            container.innerHTML = '';
+        function spawn3DCoins(wishes) {
+            // Remove old coins from scene
+            wishCoins.forEach(c => scene.remove(c.mesh));
+            wishCoins = [];
 
-            wishes.forEach(wish => {
-                const card = document.createElement('div');
-                card.className = `wish-card ${wish.isFulfilled ? 'fulfilled' : ''}`;
-                if (wish.color) card.style.borderLeftColor = wish.color;
+            const coinGeo = new THREE.CylinderGeometry(0.18, 0.18, 0.04, 16);
 
-                const isOwner = currentUser && (wish.username === currentUser.username || wish.userId === currentUser.id);
+            wishes.forEach((wish, index) => {
+                // Random position inside bottom pool water
+                const angle = Math.random() * Math.PI * 2;
+                const radius = 0.5 + Math.random() * 2.2; 
+                const x = Math.cos(angle) * radius;
+                const z = Math.sin(angle) * radius;
+                const y = -0.52 + (Math.random() * 0.05); // resting on water bottom
 
-                card.innerHTML = `
-                    <div>
-                        <div>${wish.text}</div>
-                        <div class="wish-meta">By: ${wish.username || 'Anonymous'} ${wish.isFulfilled ? '• ✨ Fulfilled' : ''}</div>
-                    </div>
-                    ${isOwner ? `
-                        <div class="wish-actions">
-                            <button class="action-btn" onclick="toggleFulfilled('${wish._id}', ${wish.isFulfilled})">${wish.isFulfilled ? '⏳ Unfulfill' : '✨ Fulfill'}</button>
-                            <button class="action-btn" onclick="deleteWish('${wish._id}')">🗑️</button>
-                        </div>
-                    ` : ''}
-                `;
-                container.appendChild(card);
+                // Material color based on fulfilled status
+                const mat = wish.isFulfilled 
+                    ? new THREE.MeshStandardMaterial({ color: 0x00ff88, metalness: 0.9, roughness: 0.1 })
+                    : goldMaterial;
+
+                const coinMesh = new THREE.Mesh(coinGeo, mat);
+                coinMesh.position.set(x, y, z);
+                coinMesh.rotation.x = Math.PI / 2 + (Math.random() - 0.5) * 0.4;
+                coinMesh.rotation.z = Math.random() * Math.PI;
+
+                scene.add(coinMesh);
+                wishCoins.push({ mesh: coinMesh, data: wish });
             });
         }
 
@@ -606,12 +680,14 @@
                         'Authorization': `Bearer ${token}`
                     },
                     body: JSON.stringify({
-                        isFulfilled: !currentStatus,
-                        color: !currentStatus ? '#00ff88' : '#00f3ff'
+                        isFulfilled: !currentStatus
                     })
                 });
 
-                if (res.ok) loadWishes();
+                if (res.ok) {
+                    hideTooltip();
+                    loadWishes();
+                }
             } catch (err) { console.error('Error updating wish:', err); }
         }
 
@@ -625,7 +701,10 @@
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
 
-                if (res.ok) loadWishes();
+                if (res.ok) {
+                    hideTooltip();
+                    loadWishes();
+                }
             } catch (err) { console.error('Error deleting wish:', err); }
         }
     </script>
