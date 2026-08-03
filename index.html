@@ -79,7 +79,7 @@
 
         .prompt-title {
             position: absolute;
-            top: 15%;
+            top: 12%;
             left: 50%;
             transform: translateX(-50%);
             z-index: 10;
@@ -94,29 +94,36 @@
             pointer-events: none;
         }
 
-        .bottom-bar {
+        .bottom-bar-container {
             position: absolute;
-            bottom: 30px;
+            bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
             width: 90%;
-            max-width: 550px;
-            background: rgba(8, 12, 20, 0.75);
-            border: 1px solid rgba(0, 243, 255, 0.5);
-            box-shadow: 0 0 25px rgba(0, 243, 255, 0.3);
-            border-radius: 30px;
-            padding: 6px;
+            max-width: 600px;
             display: flex;
-            align-items: center;
-            backdrop-filter: blur(10px);
+            flex-direction: column;
+            gap: 10px;
             z-index: 10;
         }
 
-        .bottom-bar input {
+        .bottom-bar {
+            background: rgba(8, 12, 20, 0.85);
+            border: 1px solid rgba(0, 243, 255, 0.5);
+            box-shadow: 0 0 25px rgba(0, 243, 255, 0.3);
+            border-radius: 30px;
+            padding: 8px 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            backdrop-filter: blur(10px);
+        }
+
+        .bottom-bar input[type="text"] {
             flex: 1;
             background: transparent;
             border: none;
-            padding: 10px 20px;
+            padding: 10px 15px;
             color: #fff;
             font-size: 1rem;
             outline: none;
@@ -124,12 +131,23 @@
 
         .bottom-bar input::placeholder { color: #6a7b95; }
 
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.8rem;
+            color: #00f3ff;
+            margin: 0 10px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
         .btn-throw {
             background: linear-gradient(90deg, #ff9900, #ffbb00);
             border: none;
             color: #000;
             font-weight: bold;
-            padding: 12px 24px;
+            padding: 10px 20px;
             border-radius: 25px;
             cursor: pointer;
             box-shadow: 0 0 15px rgba(255, 153, 0, 0.5);
@@ -142,6 +160,56 @@
             box-shadow: 0 0 25px rgba(255, 153, 0, 0.8);
         }
 
+        /* Wishes Drawer / List */
+        .wishes-drawer {
+            max-height: 180px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding-right: 5px;
+        }
+
+        .wish-card {
+            background: rgba(13, 19, 34, 0.85);
+            border-left: 4px solid #00f3ff;
+            padding: 10px 15px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            backdrop-filter: blur(5px);
+            font-size: 0.9rem;
+        }
+
+        .wish-card.fulfilled {
+            border-left-color: #00ff88;
+            opacity: 0.8;
+        }
+
+        .wish-meta {
+            font-size: 0.75rem;
+            color: #8fa0be;
+            margin-top: 3px;
+        }
+
+        .wish-actions {
+            display: flex;
+            gap: 6px;
+        }
+
+        .action-btn {
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: #fff;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.75rem;
+        }
+        .action-btn:hover { background: rgba(255,255,255,0.25); }
+
+        /* Modal Styles */
         .modal {
             display: none;
             position: fixed;
@@ -211,17 +279,26 @@
         <div class="badge" id="wishCounter">✨ Wishes: 0</div>
         <div class="top-right-controls" id="authSection">
             <button class="btn-neon" onclick="openModal('login')">🔑 Login / Sign Up</button>
-            <button class="btn-neon" style="border-color:#555; color:#aaa;">☀️ Day / 🌙 Night</button>
         </div>
     </div>
 
     <div class="prompt-title">Make your wish come true...</div>
     <div id="canvas-container"></div>
 
-    <form class="bottom-bar" id="wishForm">
-        <input type="text" id="wishInput" placeholder="Write a wish..." required>
-        <button type="submit" class="btn-throw">Throw € (1€)</button>
-    </form>
+    <!-- Bottom Controls & Wish List -->
+    <div class="bottom-bar-container">
+        <div class="wishes-drawer" id="wishesContainer"></div>
+
+        <form class="bottom-bar" id="wishForm">
+            <input type="text" id="wishInput" placeholder="Write a wish..." required>
+            
+            <label class="checkbox-container">
+                <input type="checkbox" id="isPublicCheckbox" checked> Public
+            </label>
+
+            <button type="submit" class="btn-throw">Throw € (1€)</button>
+        </form>
+    </div>
 
     <!-- Auth Modal -->
     <div class="modal" id="authModal">
@@ -409,6 +486,7 @@
 
                 updateAuthUI();
                 closeModal();
+                loadWishes();
                 alert(`Welcome ${currentUser.username}!`);
             } catch (err) {
                 alert(err.message);
@@ -437,6 +515,7 @@
 
                 updateAuthUI();
                 closeModal();
+                loadWishes();
                 alert(`Welcome ${currentUser.username}!`);
             } catch (err) { alert(err.message); }
         });
@@ -446,36 +525,109 @@
             localStorage.removeItem('user');
             currentUser = null;
             updateAuthUI();
+            loadWishes();
         }
 
+        // LOAD AND RENDER WISHES
         async function loadWishes() {
             try {
                 const res = await fetch(`${API_URL}/wishes`);
                 const wishes = await res.json();
                 if (Array.isArray(wishes)) {
                     document.getElementById('wishCounter').innerText = `✨ Wishes: ${wishes.length}`;
+                    renderWishes(wishes);
                 }
             } catch (err) { console.log('Backend sync pending...'); }
         }
 
+        function renderWishes(wishes) {
+            const container = document.getElementById('wishesContainer');
+            container.innerHTML = '';
+
+            wishes.forEach(wish => {
+                const card = document.createElement('div');
+                card.className = `wish-card ${wish.isFulfilled ? 'fulfilled' : ''}`;
+                if (wish.color) card.style.borderLeftColor = wish.color;
+
+                const isOwner = currentUser && (wish.username === currentUser.username || wish.userId === currentUser.id);
+
+                card.innerHTML = `
+                    <div>
+                        <div>${wish.text}</div>
+                        <div class="wish-meta">By: ${wish.username || 'Anonymous'} ${wish.isFulfilled ? '• ✨ Fulfilled' : ''}</div>
+                    </div>
+                    ${isOwner ? `
+                        <div class="wish-actions">
+                            <button class="action-btn" onclick="toggleFulfilled('${wish._id}', ${wish.isFulfilled})">${wish.isFulfilled ? '⏳ Unfulfill' : '✨ Fulfill'}</button>
+                            <button class="action-btn" onclick="deleteWish('${wish._id}')">🗑️</button>
+                        </div>
+                    ` : ''}
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // SUBMIT WISH
         document.getElementById('wishForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const text = document.getElementById('wishInput').value;
+            const isPublic = document.getElementById('isPublicCheckbox').checked;
+            const token = localStorage.getItem('token');
 
             try {
+                const headers = { 'Content-Type': 'application/json' };
+                if (token) headers['Authorization'] = `Bearer ${token}`;
+
                 const wishRes = await fetch(`${API_URL}/wishes`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ text, userId: currentUser ? currentUser.id : null })
+                    headers: headers,
+                    body: JSON.stringify({
+                        text,
+                        isPublic,
+                        color: '#00f3ff'
+                    })
                 });
 
                 if (!wishRes.ok) throw new Error('Failed to send wish');
 
                 document.getElementById('wishInput').value = '';
-                alert('✨ Your wish has been tossed into the fountain!');
                 loadWishes();
             } catch (err) { alert('Error: ' + err.message); }
         });
+
+        // TOGGLE FULFILLED
+        async function toggleFulfilled(wishId, currentStatus) {
+            const token = localStorage.getItem('token');
+            try {
+                const res = await fetch(`${API_URL}/wishes/${wishId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        isFulfilled: !currentStatus,
+                        color: !currentStatus ? '#00ff88' : '#00f3ff'
+                    })
+                });
+
+                if (res.ok) loadWishes();
+            } catch (err) { console.error('Error updating wish:', err); }
+        }
+
+        // DELETE WISH
+        async function deleteWish(wishId) {
+            if (!confirm('Θέλεις σίγουρα να διαγράψεις αυτή την ευχή;')) return;
+            const token = localStorage.getItem('token');
+            try {
+                const res = await fetch(`${API_URL}/wishes/${wishId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (res.ok) loadWishes();
+            } catch (err) { console.error('Error deleting wish:', err); }
+        }
     </script>
 </body>
 </html>
