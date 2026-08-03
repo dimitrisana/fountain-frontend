@@ -7,6 +7,8 @@
     <!-- Three.js & Controls -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <!-- Google Auth SDK -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
     
@@ -28,7 +30,6 @@
             z-index: 1;
         }
 
-        /* Top Navigation Overlay */
         .top-bar {
             position: absolute;
             top: 20px;
@@ -76,7 +77,6 @@
             box-shadow: 0 0 20px rgba(255, 170, 0, 0.6);
         }
 
-        /* Floating Wish Prompt */
         .prompt-title {
             position: absolute;
             top: 15%;
@@ -94,7 +94,6 @@
             pointer-events: none;
         }
 
-        /* Bottom Input Bar */
         .bottom-bar {
             position: absolute;
             bottom: 30px;
@@ -123,9 +122,7 @@
             outline: none;
         }
 
-        .bottom-bar input::placeholder {
-            color: #6a7b95;
-        }
+        .bottom-bar input::placeholder { color: #6a7b95; }
 
         .btn-throw {
             background: linear-gradient(90deg, #ff9900, #ffbb00);
@@ -145,7 +142,6 @@
             box-shadow: 0 0 25px rgba(255, 153, 0, 0.8);
         }
 
-        /* Modal Auth Styling */
         .modal {
             display: none;
             position: fixed;
@@ -165,6 +161,7 @@
             width: 90%;
             max-width: 380px;
             position: relative;
+            text-align: center;
         }
 
         .close-btn {
@@ -175,7 +172,7 @@
             cursor: pointer;
         }
 
-        .form-group { margin-bottom: 15px; }
+        .form-group { margin-bottom: 15px; text-align: left; }
         .form-group label { display: block; margin-bottom: 5px; font-size: 0.85rem; color: #8fa0be; }
         .form-group input {
             width: 100%; padding: 10px; background: #050811;
@@ -188,11 +185,28 @@
             background: linear-gradient(90deg, #00f3ff, #0077ff);
             border: none; border-radius: 8px; color: #fff; font-weight: bold; cursor: pointer;
         }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            margin: 18px 0;
+            color: #6a7b95;
+            font-size: 0.8rem;
+        }
+        .divider::before, .divider::after {
+            content: ''; flex: 1; height: 1px; background: rgba(0, 243, 255, 0.2);
+        }
+        .divider span { padding: 0 10px; }
+
+        .google-btn-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
 
-    <!-- Top Navigation -->
     <div class="top-bar">
         <div class="badge" id="wishCounter">✨ Wishes: 0</div>
         <div class="top-right-controls" id="authSection">
@@ -201,13 +215,9 @@
         </div>
     </div>
 
-    <!-- Center Prompt -->
     <div class="prompt-title">Make your wish come true...</div>
-
-    <!-- 3D Canvas -->
     <div id="canvas-container"></div>
 
-    <!-- Bottom Input Bar -->
     <form class="bottom-bar" id="wishForm">
         <input type="text" id="wishInput" placeholder="Write a wish..." required>
         <button type="submit" class="btn-throw">Throw € (1€)</button>
@@ -218,6 +228,18 @@
         <div class="modal-content">
             <span class="close-btn" onclick="closeModal()">&times;</span>
             <h2 id="modalTitle" style="margin-bottom:20px; color:#00f3ff;">Login</h2>
+
+            <!-- GOOGLE SIGN IN BUTTON -->
+            <div class="google-btn-container">
+                <div id="g_id_onload"
+                    data-client_id="1093667690614-7pk8daqkqnfo4ei5rks0sqoesopsgjj0.apps.googleusercontent.com"
+                    data-callback="handleGoogleCredentialResponse">
+                </div>
+                <div class="g_id_signin" data-type="standard" data-theme="filled_black" data-size="large" data-shape="pill"></div>
+            </div>
+
+            <div class="divider"><span>OR</span></div>
+
             <form id="authForm">
                 <div class="form-group">
                     <label>Username</label>
@@ -229,6 +251,7 @@
                 </div>
                 <button type="submit" class="btn-submit-modal" id="modalSubmitBtn">Login</button>
             </form>
+            
             <p style="margin-top:15px; font-size:0.8rem; text-align:center; color:#8fa0be; cursor:pointer;" onclick="toggleAuthMode()" id="toggleAuthText">
                 Don't have an account? Sign Up
             </p>
@@ -240,7 +263,7 @@
         let authMode = 'login';
         let currentUser = JSON.parse(localStorage.getItem('user')) || null;
 
-        // --- 1. THREE.JS SCENE SETUP ---
+        // THREE.JS SCENE SETUP
         const container = document.getElementById('canvas-container');
         const scene = new THREE.Scene();
         scene.fog = new THREE.FogExp2(0x050508, 0.025);
@@ -257,7 +280,6 @@
         controls.enableDamping = true;
         controls.maxPolarAngle = Math.PI / 2 - 0.05;
 
-        // Lights
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
         scene.add(ambientLight);
 
@@ -265,11 +287,9 @@
         cyanLight.position.set(0, 1, 0);
         scene.add(cyanLight);
 
-        // Fountain 3D Geometry
         const darkMetal = new THREE.MeshStandardMaterial({ color: 0x222831, roughness: 0.4 });
         const glowingWater = new THREE.MeshStandardMaterial({ color: 0x00f3ff, transparent: true, opacity: 0.8, roughness: 0.1 });
 
-        // Base & Pool
         const base = new THREE.Mesh(new THREE.CylinderGeometry(3.5, 4, 0.8, 32), darkMetal);
         base.position.y = -1;
         scene.add(base);
@@ -278,7 +298,6 @@
         poolWater.position.y = -0.8;
         scene.add(poolWater);
 
-        // Center Pillar & Bowl
         const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.6, 1.8, 16), darkMetal);
         pillar.position.y = 0.1;
         scene.add(pillar);
@@ -291,7 +310,6 @@
         bowlWater.position.y = 1.1;
         scene.add(bowlWater);
 
-        // Particle System (Water Spray)
         const pCount = 350;
         const pGeo = new THREE.BufferGeometry();
         const pPos = new Float32Array(pCount * 3);
@@ -344,7 +362,7 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
-        // --- 2. AUTH & APP LOGIC ---
+        // AUTH & APP LOGIC
         updateAuthUI();
         loadWishes();
 
@@ -370,11 +388,32 @@
             document.getElementById('authModal').style.display = 'flex';
         }
 
-        function toggleAuthMode() {
-            openModal(authMode === 'login' ? 'signup' : 'login');
-        }
-
+        function toggleAuthMode() { openModal(authMode === 'login' ? 'signup' : 'login'); }
         function closeModal() { document.getElementById('authModal').style.display = 'none'; }
+
+        // GOOGLE AUTH HANDLER
+        async function handleGoogleCredentialResponse(response) {
+            try {
+                const res = await fetch(`${API_URL}/auth/google`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token: response.credential })
+                });
+
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.message || 'Google Auth Failed');
+
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('user', JSON.stringify(data.user));
+                currentUser = data.user;
+
+                updateAuthUI();
+                closeModal();
+                alert(`Welcome ${currentUser.username}!`);
+            } catch (err) {
+                alert(err.message);
+            }
+        }
 
         document.getElementById('authForm').addEventListener('submit', async (e) => {
             e.preventDefault();
