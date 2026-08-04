@@ -539,6 +539,130 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
+        // --- AUDIO FX (Synthesized Splash / Coin Sound) ---
+        function playSplashSound() {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                
+                // Coin metallic chime
+                const osc1 = audioCtx.createOscillator();
+                const gain1 = audioCtx.createGain();
+                osc1.type = 'sine';
+                osc1.frequency.setValueAtTime(987.77, audioCtx.currentTime); // B5 note
+                osc1.frequency.exponentialRampToValueAtTime(1318.51, audioCtx.currentTime + 0.1); // E6 note
+                gain1.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gain1.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+                osc1.connect(gain1);
+                gain1.connect(audioCtx.destination);
+                osc1.start();
+                osc1.stop(audioCtx.currentTime + 0.4);
+
+                // Water splash noise
+                const bufferSize = audioCtx.sampleRate * 0.3;
+                const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = Math.random() * 2 - 1;
+                }
+                const noise = audioCtx.createBufferSource();
+                noise.buffer = buffer;
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = 'bandpass';
+                filter.frequency.value = 1200;
+                const gain2 = audioCtx.createGain();
+                gain2.gain.setValueAtTime(0.2, audioCtx.currentTime + 0.05);
+                gain2.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                noise.connect(filter);
+                filter.connect(gain2);
+                gain2.connect(audioCtx.destination);
+                noise.start(audioCtx.currentTime + 0.05);
+            } catch(e) {
+                console.log('Audio playback waiting for interaction');
+            }
+        }
+
+        // --- WATER RIPPLE EFFECT ---
+        function createWaterRipple(x, z) {
+            const rippleGeo = new THREE.RingGeometry(0.05, 0.15, 32);
+            const rippleMat = new THREE.MeshBasicMaterial({
+                color: 0x00f3ff,
+                side: THREE.DoubleSide,
+                transparent: true,
+                opacity: 0.9
+            });
+            const ripple = new THREE.Mesh(rippleGeo, rippleMat);
+            ripple.rotation.x = Math.PI / 2;
+            ripple.position.set(x, -0.79, z);
+            scene.add(ripple);
+
+            let scale = 1;
+            let opacity = 0.9;
+
+            function animateRipple() {
+                scale += 0.08;
+                opacity -= 0.03;
+                ripple.scale.set(scale, scale, 1);
+                ripple.material.opacity = opacity;
+
+                if (opacity > 0) {
+                    requestAnimationFrame(animateRipple);
+                } else {
+                    scene.remove(ripple);
+                    ripple.geometry.dispose();
+                    ripple.material.dispose();
+                }
+            }
+            animateRipple();
+        }
+
+        // --- COIN TOSS ANIMATION ---
+        function animateCoinDrop(callback) {
+            const startPos = new THREE.Vector3((Math.random() - 0.5) * 4, 6, 3);
+            const targetAngle = Math.random() * Math.PI * 2;
+            const targetRadius = 0.5 + Math.random() * 2.0;
+            const targetPos = new THREE.Vector3(
+                Math.cos(targetAngle) * targetRadius,
+                -0.8,
+                Math.sin(targetAngle) * targetRadius
+            );
+
+            const tossCoinGeo = new THREE.CylinderGeometry(0.18, 0.18, 0.04, 16);
+            const tossCoinMat = new THREE.MeshStandardMaterial({ color: 0xffcc00, metalness: 0.9, roughness: 0.1 });
+            const tossCoin = new THREE.Mesh(tossCoinGeo, tossCoinMat);
+            tossCoin.position.copy(startPos);
+            scene.add(tossCoin);
+
+            let progress = 0;
+            const duration = 120; // ~2 seconds
+
+            function updateToss() {
+                progress++;
+                const t = progress / duration;
+
+                tossCoin.position.x = THREE.MathUtils.lerp(startPos.x, targetPos.x, t);
+                tossCoin.position.z = THREE.MathUtils.lerp(startPos.z, targetPos.z, t);
+                
+                const heightArc = Math.sin(t * Math.PI) * 2; 
+                tossCoin.position.y = THREE.MathUtils.lerp(startPos.y, targetPos.y, t) + heightArc;
+
+                tossCoin.rotation.x += 0.25;
+                tossCoin.rotation.y += 0.2;
+
+                if (t < 1) {
+                    requestAnimationFrame(updateToss);
+                } else {
+                    scene.remove(tossCoin);
+                    tossCoin.geometry.dispose();
+                    tossCoin.material.dispose();
+                    
+                    playSplashSound();
+                    createWaterRipple(targetPos.x, targetPos.z);
+                    if (callback) callback();
+                }
+            }
+            updateToss();
+        }
+
         // EVENT LISTENERS UI
         document.getElementById('closeModalBtn').addEventListener('click', closeModal);
         document.getElementById('toggleAuthText').addEventListener('click', toggleAuthMode);
@@ -547,8 +671,13 @@
         window.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('payment') === 'success') {
-                alert('✨ Payment completed successfully! Your wish was thrown into the fountain.');
                 window.history.replaceState({}, document.title, window.location.pathname);
+                
+                setTimeout(() => {
+                    animateCoinDrop(() => {
+                        loadWishes();
+                    });
+                }, 500);
             } else if (urlParams.get('payment') === 'cancel') {
                 alert('❌ Payment was cancelled.');
                 window.history.replaceState({}, document.title, window.location.pathname);
@@ -664,7 +793,6 @@
                 const wishes = await res.json();
                 if (Array.isArray(wishes)) {
                     document.getElementById('wishCounter').innerText = `✨ Wishes: ${wishes.length}`;
-                    // Cap 3D coin rendering to the latest 1,500 wishes
                     spawn3DCoins(wishes.slice(-1500));
                 }
             } catch (err) { console.log('Waiting for backend connection...'); }
@@ -675,7 +803,6 @@
             wishCoins = [];
             coinMeshes = [];
 
-            // Low-poly geometry (8 segments) optimized for performance up to 1,500 coins
             const coinGeo = new THREE.CylinderGeometry(0.18, 0.18, 0.04, 8);
 
             wishes.forEach((wish) => {
