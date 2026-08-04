@@ -273,7 +273,10 @@
 
     <div class="top-bar">
         <div class="badge" id="wishCounter">✨ Wishes: 0</div>
-        <div class="top-right-controls" id="authSection"></div>
+        <div class="top-right-controls" id="authSection">
+            <!-- About Button integrated into top right controls -->
+            <button class="btn-neon" id="aboutBtn">✨ About</button>
+        </div>
     </div>
 
     <div class="prompt-title">Make your wish come true... ✨</div>
@@ -295,6 +298,35 @@
 
         <button type="submit" class="btn-throw" id="submitWishBtn">Throw € (1€)</button>
     </form>
+
+    <!-- About / Mission Modal -->
+    <div class="modal" id="aboutModal">
+        <div class="modal-content" style="max-width: 500px; text-align: left;">
+            <span class="close-btn" id="closeAboutModalBtn">&times;</span>
+            <h2 style="color:#00f3ff; margin-bottom:15px; text-align:center;">About The Fountain</h2>
+            
+            <p style="font-size:0.9rem; color:#d1d5db; line-height:1.6; margin-bottom:12px;">
+                Welcome to the <strong>World’s First 3D Digital Wishing Fountain</strong>, brought to life through advanced AI prompt intelligence (Gemini).
+            </p>
+
+            <p style="font-size:0.9rem; color:#d1d5db; line-height:1.6; margin-bottom:12px;">
+                Here, every wish matters. You hold complete control over your journey:
+            </p>
+
+            <ul style="font-size:0.85rem; color:#8fa0be; margin-left:20px; margin-bottom:15px; line-height:1.6;">
+                <li><strong>Public Visibility:</strong> Choose to make your wish visible to the world or keep it private.</li>
+                <li><strong>Track Progress:</strong> Mark your wish as <em>Fulfilled</em> to turn its coin into a glowing green beacon.</li>
+                <li><strong>Full Management:</strong> Edit or delete your active wishes anytime.</li>
+            </ul>
+
+            <div style="background: rgba(0, 243, 255, 0.05); border: 1px solid rgba(0, 243, 255, 0.3); padding: 12px; border-radius: 10px; margin-top: 15px;">
+                <h4 style="color:#ffcc00; margin-bottom:5px; font-size:0.95rem;">🎗️ Our Mission</h4>
+                <p style="font-size:0.85rem; color:#d1d5db; line-height:1.5;">
+                    We believe in the power of collective hope. Once our fountain reaches a major milestone of wishes, a <strong>significant portion of proceeds will be donated directly to fight cancer</strong> and support life-saving research.
+                </p>
+            </div>
+        </div>
+    </div>
 
     <!-- Auth Modal -->
     <div class="modal" id="authModal">
@@ -667,6 +699,15 @@
         document.getElementById('closeModalBtn').addEventListener('click', closeModal);
         document.getElementById('toggleAuthText').addEventListener('click', toggleAuthMode);
 
+        // ABOUT MODAL EVENT LISTENERS
+        document.getElementById('aboutBtn').addEventListener('click', () => {
+            document.getElementById('aboutModal').style.display = 'flex';
+        });
+
+        document.getElementById('closeAboutModalBtn').addEventListener('click', () => {
+            document.getElementById('aboutModal').style.display = 'none';
+        });
+
         // CHECK FOR PAYMENT STATUS ON PAGE LOAD
         window.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
@@ -690,7 +731,11 @@
 
         function updateAuthUI() {
             const authSection = document.getElementById('authSection');
+            
+            // Preserve the About button and clear user control elements
+            const aboutBtn = document.getElementById('aboutBtn');
             authSection.innerHTML = '';
+            authSection.appendChild(aboutBtn);
 
             if (currentUser) {
                 const userSpan = document.createElement('span');
@@ -853,31 +898,29 @@
                         userId: currentUser ? currentUser.id : ''
                     })
                 });
-
+                
                 const data = await response.json();
-
-                if (response.ok && data.url) {
+                if (!response.ok) throw new Error(data.message || 'Failed to create checkout session');
+                
+                if (data.url) {
                     window.location.href = data.url;
                 } else {
-                    alert(data.message || 'Αποτυχία δημιουργίας συνεδρίας πληρωμής.');
-                    submitBtn.innerText = 'Throw € (1€)';
-                    submitBtn.disabled = false;
+                    throw new Error('No redirect URL received');
                 }
             } catch (err) {
-                console.error(err);
-                alert('Σφάλμα κατά τη σύνδεση με τον διακομιστή.');
+                alert(err.message);
                 submitBtn.innerText = 'Throw € (1€)';
                 submitBtn.disabled = false;
             }
         });
 
-        // TOGGLE FULFILLED & DELETE WISH ACTIONS
+        // FULFILL / RESET WISH
         async function toggleFulfilled(wishId, currentStatus) {
             const token = localStorage.getItem('token');
-            if (!token) return alert('Πρέπει να συνδεθείτε!');
+            if (!token) return alert('Please login first.');
 
             try {
-                const res = await fetch(`${API_URL}/wishes/${wishId}`, {
+                const res = await fetch(`${API_URL}/wishes/${wishId}/fulfill`, {
                     method: 'PATCH',
                     headers: {
                         'Content-Type': 'application/json',
@@ -886,22 +929,20 @@
                     body: JSON.stringify({ isFulfilled: !currentStatus })
                 });
 
-                if (res.ok) {
-                    hideTooltip();
-                    loadWishes();
-                } else {
-                    const errData = await res.json();
-                    alert(errData.message || 'Αποτυχία ενημέρωσης.');
-                }
+                if (!res.ok) throw new Error('Failed to update wish status');
+
+                hideTooltip();
+                loadWishes();
             } catch (err) {
-                alert('Σφάλμα κατά την ενημέρωση της ευχής.');
+                alert(err.message);
             }
         }
 
+        // DELETE WISH
         async function deleteWish(wishId) {
-            if (!confirm('Είστε σίγουροι ότι θέλετε να διαγράψετε αυτή την ευχή;')) return;
+            if (!confirm('Are you sure you want to delete this wish?')) return;
             const token = localStorage.getItem('token');
-            if (!token) return alert('Πρέπει να συνδεθείτε!');
+            if (!token) return alert('Please login first.');
 
             try {
                 const res = await fetch(`${API_URL}/wishes/${wishId}`, {
@@ -911,15 +952,12 @@
                     }
                 });
 
-                if (res.ok) {
-                    hideTooltip();
-                    loadWishes();
-                } else {
-                    const errData = await res.json();
-                    alert(errData.message || 'Αποτυχία διαγραφής.');
-                }
+                if (!res.ok) throw new Error('Failed to delete wish');
+
+                hideTooltip();
+                loadWishes();
             } catch (err) {
-                alert('Σφάλμα κατά τη διαγραφή της ευχής.');
+                alert(err.message);
             }
         }
     </script>
