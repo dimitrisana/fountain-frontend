@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="el">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -273,12 +273,10 @@
 
     <div class="top-bar">
         <div class="badge" id="wishCounter">✨ Wishes: 0</div>
-        <div class="top-right-controls" id="authSection">
-            <button class="btn-neon" onclick="openModal('login')">🔑 Login / Sign Up</button>
-        </div>
+        <div class="top-right-controls" id="authSection"></div>
     </div>
 
-    <div class="prompt-title">Make your wish come true... ✨</div>
+    <div class="prompt-title">Kάνε την ευχή σου πραγματικότητα... ✨</div>
     <div id="canvas-container"></div>
 
     <!-- COIN TOOLTIP POPUP -->
@@ -289,20 +287,20 @@
     </div>
 
     <form class="bottom-bar" id="wishForm">
-        <input type="text" id="wishInput" placeholder="Write a wish..." required>
+        <input type="text" id="wishInput" placeholder="Γράψε μια ευχή..." required>
         
         <label class="checkbox-container">
-            <input type="checkbox" id="isPublicCheckbox" checked> Public
+            <input type="checkbox" id="isPublicCheckbox" checked> Δημόσια
         </label>
 
-        <button type="submit" class="btn-throw" id="submitWishBtn">Throw € (1€)</button>
+        <button type="submit" class="btn-throw" id="submitWishBtn">Ρίξε € (1€)</button>
     </form>
 
     <!-- Auth Modal -->
     <div class="modal" id="authModal">
         <div class="modal-content">
-            <span class="close-btn" onclick="closeModal()">&times;</span>
-            <h2 id="modalTitle" style="margin-bottom:20px; color:#00f3ff;">Login</h2>
+            <span class="close-btn" id="closeModalBtn">&times;</span>
+            <h2 id="modalTitle" style="margin-bottom:20px; color:#00f3ff;">Σύνδεση</h2>
 
             <!-- GOOGLE SIGN IN BUTTON -->
             <div class="google-btn-container">
@@ -313,22 +311,22 @@
                 <div class="g_id_signin" data-type="standard" data-theme="filled_black" data-size="large" data-shape="pill"></div>
             </div>
 
-            <div class="divider"><span>OR</span></div>
+            <div class="divider"><span>Ή</span></div>
 
             <form id="authForm">
                 <div class="form-group">
-                    <label>Username</label>
+                    <label>Όνομα χρήστη</label>
                     <input type="text" id="username" required>
                 </div>
                 <div class="form-group">
-                    <label>Password</label>
+                    <label>Κωδικός</label>
                     <input type="password" id="password" required>
                 </div>
-                <button type="submit" class="btn-submit-modal" id="modalSubmitBtn">Login</button>
+                <button type="submit" class="btn-submit-modal" id="modalSubmitBtn">Σύνδεση</button>
             </form>
             
-            <p style="margin-top:15px; font-size:0.8rem; text-align:center; color:#8fa0be; cursor:pointer;" onclick="toggleAuthMode()" id="toggleAuthText">
-                Don't have an account? Sign Up
+            <p style="margin-top:15px; font-size:0.8rem; text-align:center; color:#8fa0be; cursor:pointer;" id="toggleAuthText">
+                Δεν έχεις λογαριασμό; Εγγραφή
             </p>
         </div>
     </div>
@@ -338,7 +336,8 @@
         let authMode = 'login';
         let currentUser = JSON.parse(localStorage.getItem('user')) || null;
         let wishCoins = []; // Array of { mesh, data }
-        let selectedWish = null;
+        let coinMeshes = []; // Cached meshes for fast raycasting
+        let activeCoinObj = null; // Currently hovered coin
 
         // THREE.JS SCENE SETUP
         const container = document.getElementById('canvas-container');
@@ -350,7 +349,7 @@
 
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         container.appendChild(renderer.domElement);
 
         const controls = new THREE.OrbitControls(camera, renderer.domElement);
@@ -370,6 +369,7 @@
 
         const darkMetal = new THREE.MeshStandardMaterial({ color: 0x222831, roughness: 0.4 });
         const glowingWater = new THREE.MeshStandardMaterial({ color: 0x00f3ff, transparent: true, opacity: 0.75, roughness: 0.1 });
+        const blueWater = new THREE.MeshStandardMaterial({ color: 0x0055ff, transparent: true, opacity: 0.8, roughness: 0.1 });
         const goldMaterial = new THREE.MeshStandardMaterial({ color: 0xffcc00, metalness: 0.8, roughness: 0.2 });
 
         const base = new THREE.Mesh(new THREE.CylinderGeometry(3.5, 4, 0.8, 32), darkMetal);
@@ -388,7 +388,8 @@
         bowl.position.y = 1.0;
         scene.add(bowl);
 
-        const bowlWater = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 0.2, 32), glowingWater);
+        // Νερό στο πάνω μπολ με μπλε χρώμα (blueWater)
+        const bowlWater = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 0.2, 32), blueWater);
         bowlWater.position.y = 1.1;
         scene.add(bowlWater);
 
@@ -426,13 +427,16 @@
             mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
             mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
+            if (coinMeshes.length === 0) return;
+
             raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObjects(wishCoins.map(c => c.mesh));
+            const intersects = raycaster.intersectObjects(coinMeshes);
 
             if (intersects.length > 0) {
                 const hitCoin = wishCoins.find(c => c.mesh === intersects[0].object);
                 if (hitCoin) {
-                    showTooltip(hitCoin, event.clientX, event.clientY);
+                    activeCoinObj = hitCoin;
+                    showTooltip(hitCoin);
                     document.body.style.cursor = 'pointer';
                     return;
                 }
@@ -444,33 +448,54 @@
             }
         }
 
-        function showTooltip(coinObj, mouseX, mouseY) {
-            selectedWish = coinObj.data;
+        function showTooltip(coinObj) {
+            const selectedWish = coinObj.data;
             document.getElementById('ttText').innerText = selectedWish.text;
-            document.getElementById('ttAuthor').innerText = `By: ${selectedWish.username || 'Anonymous'} ${selectedWish.isFulfilled ? '• ✨ Fulfilled' : ''}`;
+            document.getElementById('ttAuthor').innerText = `Aπό: ${selectedWish.username || 'Ανώνυμος'} ${selectedWish.isFulfilled ? '• ✨ Εκπληρώθηκε' : ''}`;
 
             const isOwner = currentUser && (selectedWish.username === currentUser.username || selectedWish.userId === currentUser.id);
             const actionsDiv = document.getElementById('ttActions');
             actionsDiv.innerHTML = '';
 
             if (isOwner) {
-                actionsDiv.innerHTML = `
-                    <button class="tooltip-btn" onclick="toggleFulfilled('${selectedWish._id}', ${selectedWish.isFulfilled})">${selectedWish.isFulfilled ? '⏳ Reset' : '✨ Fulfill'}</button>
-                    <button class="tooltip-btn delete" onclick="deleteWish('${selectedWish._id}')">🗑️ Delete</button>
-                `;
+                const toggleBtn = document.createElement('button');
+                toggleBtn.className = 'tooltip-btn';
+                toggleBtn.innerText = selectedWish.isFulfilled ? '⏳ Επαναφορά' : '✨ Εκπλήρωση';
+                toggleBtn.onclick = () => toggleFulfilled(selectedWish._id, selectedWish.isFulfilled);
+
+                const delBtn = document.createElement('button');
+                delBtn.className = 'tooltip-btn delete';
+                delBtn.innerText = '🗑️ Διαγραφή';
+                delBtn.onclick = () => deleteWish(selectedWish._id);
+
+                actionsDiv.appendChild(toggleBtn);
+                actionsDiv.appendChild(delBtn);
             }
 
-            const coinPos = coinObj.mesh.position.clone();
-            coinPos.project(camera);
-            const x = (coinPos.x * .5 + .5) * window.innerWidth;
-            const y = (-(coinPos.y * .5) + .5) * window.innerHeight;
-
-            tooltip.style.left = `${x}px`;
-            tooltip.style.top = `${y - 15}px`;
+            updateTooltipPosition();
             tooltip.style.display = 'block';
         }
 
+        function updateTooltipPosition() {
+            if (!activeCoinObj || tooltip.style.display !== 'block') return;
+            
+            const coinPos = activeCoinObj.mesh.position.clone();
+            coinPos.project(camera);
+            
+            if (coinPos.z > 1) {
+                tooltip.style.display = 'none';
+                return;
+            }
+
+            const x = (coinPos.x * 0.5 + 0.5) * window.innerWidth;
+            const y = (-(coinPos.y * 0.5) + 0.5) * window.innerHeight;
+
+            tooltip.style.left = `${x}px`;
+            tooltip.style.top = `${y - 15}px`;
+        }
+
         function hideTooltip() {
+            activeCoinObj = null;
             tooltip.style.display = 'none';
         }
 
@@ -498,6 +523,7 @@
             });
 
             controls.update();
+            updateTooltipPosition();
             renderer.render(scene, camera);
         }
         animate();
@@ -507,6 +533,10 @@
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
+
+        // EVENT LISTENERS UI
+        document.getElementById('closeModalBtn').addEventListener('click', closeModal);
+        document.getElementById('toggleAuthText').addEventListener('click', toggleAuthMode);
 
         // CHECK FOR PAYMENT STATUS ON PAGE LOAD
         window.addEventListener('DOMContentLoaded', () => {
@@ -526,23 +556,36 @@
 
         function updateAuthUI() {
             const authSection = document.getElementById('authSection');
+            authSection.innerHTML = '';
+
             if (currentUser) {
-                authSection.innerHTML = `
-                    <span style="color: #00f3ff; font-weight:600; align-self:center;">👤 ${currentUser.username}</span>
-                    <button class="btn-neon" onclick="logout()" style="border-color:#ff4757; color:#ff4757;">Logout</button>
-                `;
+                const userSpan = document.createElement('span');
+                userSpan.style.cssText = 'color: #00f3ff; font-weight:600; align-self:center;';
+                userSpan.innerText = `👤 ${currentUser.username}`;
+
+                const logoutBtn = document.createElement('button');
+                logoutBtn.className = 'btn-neon';
+                logoutBtn.style.cssText = 'border-color:#ff4757; color:#ff4757;';
+                logoutBtn.innerText = 'Αποσύνδεση';
+                logoutBtn.onclick = logout;
+
+                authSection.appendChild(userSpan);
+                authSection.appendChild(logoutBtn);
             } else {
-                authSection.innerHTML = `
-                    <button class="btn-neon" onclick="openModal('login')">🔑 Login / Sign Up</button>
-                `;
+                const loginBtn = document.createElement('button');
+                loginBtn.className = 'btn-neon';
+                loginBtn.innerText = '🔑 Σύνδεση / Εγγραφή';
+                loginBtn.onclick = () => openModal('login');
+
+                authSection.appendChild(loginBtn);
             }
         }
 
         function openModal(mode) {
             authMode = mode;
-            document.getElementById('modalTitle').innerText = mode === 'login' ? 'Login' : 'Sign Up';
-            document.getElementById('modalSubmitBtn').innerText = mode === 'login' ? 'Login' : 'Sign Up';
-            document.getElementById('toggleAuthText').innerText = mode === 'login' ? "Don't have an account? Sign Up" : "Already have an account? Login";
+            document.getElementById('modalTitle').innerText = mode === 'login' ? 'Σύνδεση' : 'Εγγραφή';
+            document.getElementById('modalSubmitBtn').innerText = mode === 'login' ? 'Σύνδεση' : 'Εγγραφή';
+            document.getElementById('toggleAuthText').innerText = mode === 'login' ? "Δεν έχεις λογαριασμό; Εγγραφή" : "Έχεις ήδη λογαριασμό; Σύνδεση";
             document.getElementById('authModal').style.display = 'flex';
         }
 
@@ -568,7 +611,7 @@
                 updateAuthUI();
                 closeModal();
                 loadWishes();
-                alert(`Welcome ${currentUser.username}!`);
+                alert(`Καλώς ήρθες ${currentUser.username}!`);
             } catch (err) {
                 alert(err.message);
             }
@@ -588,7 +631,7 @@
                 });
 
                 const data = await res.json();
-                if (!res.ok) throw new Error(data.message || 'Authentication failed');
+                if (!res.ok) throw new Error(data.message || 'Αποτυχία ταυτοποίησης');
 
                 localStorage.setItem('token', data.token);
                 localStorage.setItem('user', JSON.stringify(data.user));
@@ -597,7 +640,7 @@
                 updateAuthUI();
                 closeModal();
                 loadWishes();
-                alert(`Welcome ${currentUser.username}!`);
+                alert(`Καλώς ήρθες ${currentUser.username}!`);
             } catch (err) { alert(err.message); }
         });
 
@@ -615,15 +658,16 @@
                 const res = await fetch(`${API_URL}/wishes`);
                 const wishes = await res.json();
                 if (Array.isArray(wishes)) {
-                    document.getElementById('wishCounter').innerText = `✨ Wishes: ${wishes.length}`;
+                    document.getElementById('wishCounter').innerText = `✨ Ευχές: ${wishes.length}`;
                     spawn3DCoins(wishes);
                 }
-            } catch (err) { console.log('Backend sync pending...'); }
+            } catch (err) { console.log('Αναμονή για σύνδεση με το backend...'); }
         }
 
         function spawn3DCoins(wishes) {
             wishCoins.forEach(c => scene.remove(c.mesh));
             wishCoins = [];
+            coinMeshes = [];
 
             const coinGeo = new THREE.CylinderGeometry(0.18, 0.18, 0.04, 16);
 
@@ -645,6 +689,7 @@
 
                 scene.add(coinMesh);
                 wishCoins.push({ mesh: coinMesh, data: wish });
+                coinMeshes.push(coinMesh);
             });
         }
 
@@ -657,7 +702,7 @@
             const submitBtn = document.getElementById('submitWishBtn');
 
             try {
-                submitBtn.innerText = 'Redirecting...';
+                submitBtn.innerText = 'Ανακατεύθυνση...';
                 submitBtn.disabled = true;
 
                 const headers = { 'Content-Type': 'application/json' };
@@ -676,15 +721,14 @@
                 const data = await response.json();
 
                 if (!response.ok) {
-                    throw new Error(data.message || 'Payment session creation failed');
+                    throw new Error(data.message || 'Αποτυχία δημιουργίας συνεδρίας πληρωμής');
                 }
 
-                // Ανακατεύθυνση στη σελίδα πληρωμής της Stripe
                 window.location.href = data.url;
 
             } catch (err) {
-                alert('Error: ' + err.message);
-                submitBtn.innerText = 'Throw € (1€)';
+                alert('Σφάλμα: ' + err.message);
+                submitBtn.innerText = 'Ρίξε € (1€)';
                 submitBtn.disabled = false;
             }
         });
@@ -708,7 +752,7 @@
                     hideTooltip();
                     loadWishes();
                 }
-            } catch (err) { console.error('Error updating wish:', err); }
+            } catch (err) { console.error('Σφάλμα κατά την ενημέρωση της ευχής:', err); }
         }
 
         // DELETE WISH
@@ -725,7 +769,7 @@
                     hideTooltip();
                     loadWishes();
                 }
-            } catch (err) { console.error('Error deleting wish:', err); }
+            } catch (err) { console.error('Σφάλμα κατά τη διαγραφή της ευχής:', err); }
         }
     </script>
 </body>
