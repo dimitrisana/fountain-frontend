@@ -664,7 +664,8 @@
                 const wishes = await res.json();
                 if (Array.isArray(wishes)) {
                     document.getElementById('wishCounter').innerText = `✨ Wishes: ${wishes.length}`;
-                    spawn3DCoins(wishes);
+                    // Cap 3D coin rendering to the latest 1,500 wishes
+                    spawn3DCoins(wishes.slice(-1500));
                 }
             } catch (err) { console.log('Waiting for backend connection...'); }
         }
@@ -674,7 +675,8 @@
             wishCoins = [];
             coinMeshes = [];
 
-            const coinGeo = new THREE.CylinderGeometry(0.18, 0.18, 0.04, 16);
+            // Low-poly geometry (8 segments) optimized for performance up to 1,500 coins
+            const coinGeo = new THREE.CylinderGeometry(0.18, 0.18, 0.04, 8);
 
             wishes.forEach((wish) => {
                 const angle = Math.random() * Math.PI * 2;
