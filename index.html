@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="el">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -276,7 +276,7 @@
         <div class="top-right-controls" id="authSection"></div>
     </div>
 
-    <div class="prompt-title">Kάνε την ευχή σου πραγματικότητα... ✨</div>
+    <div class="prompt-title">Make your wish come true... ✨</div>
     <div id="canvas-container"></div>
 
     <!-- COIN TOOLTIP POPUP -->
@@ -287,20 +287,20 @@
     </div>
 
     <form class="bottom-bar" id="wishForm">
-        <input type="text" id="wishInput" placeholder="Γράψε μια ευχή..." required>
+        <input type="text" id="wishInput" placeholder="Make a wish..." required>
         
         <label class="checkbox-container">
-            <input type="checkbox" id="isPublicCheckbox" checked> Δημόσια
+            <input type="checkbox" id="isPublicCheckbox" checked> Public
         </label>
 
-        <button type="submit" class="btn-throw" id="submitWishBtn">Ρίξε € (1€)</button>
+        <button type="submit" class="btn-throw" id="submitWishBtn">Throw € (1€)</button>
     </form>
 
     <!-- Auth Modal -->
     <div class="modal" id="authModal">
         <div class="modal-content">
             <span class="close-btn" id="closeModalBtn">&times;</span>
-            <h2 id="modalTitle" style="margin-bottom:20px; color:#00f3ff;">Σύνδεση</h2>
+            <h2 id="modalTitle" style="margin-bottom:20px; color:#00f3ff;">Login</h2>
 
             <!-- GOOGLE SIGN IN BUTTON -->
             <div class="google-btn-container">
@@ -311,22 +311,22 @@
                 <div class="g_id_signin" data-type="standard" data-theme="filled_black" data-size="large" data-shape="pill"></div>
             </div>
 
-            <div class="divider"><span>Ή</span></div>
+            <div class="divider"><span>OR</span></div>
 
             <form id="authForm">
                 <div class="form-group">
-                    <label>Όνομα χρήστη</label>
+                    <label>Username</label>
                     <input type="text" id="username" required>
                 </div>
                 <div class="form-group">
-                    <label>Κωδικός</label>
+                    <label>Password</label>
                     <input type="password" id="password" required>
                 </div>
-                <button type="submit" class="btn-submit-modal" id="modalSubmitBtn">Σύνδεση</button>
+                <button type="submit" class="btn-submit-modal" id="modalSubmitBtn">Login</button>
             </form>
             
             <p style="margin-top:15px; font-size:0.8rem; text-align:center; color:#8fa0be; cursor:pointer;" id="toggleAuthText">
-                Δεν έχεις λογαριασμό; Εγγραφή
+                Don't have an account? Sign Up
             </p>
         </div>
     </div>
@@ -359,17 +359,22 @@
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
         scene.add(ambientLight);
 
+        // Light for bottom pool
         const cyanLight = new THREE.PointLight(0x00f3ff, 3, 15);
-        cyanLight.position.set(0, 1, 0);
+        cyanLight.position.set(0, 0.2, 0);
         scene.add(cyanLight);
+
+        // Dedicated light for top bowl water
+        const cyanLightTop = new THREE.PointLight(0x00f3ff, 2.5, 8);
+        cyanLightTop.position.set(0, 1.8, 0);
+        scene.add(cyanLightTop);
 
         const goldLight = new THREE.PointLight(0xffaa00, 2, 10);
         goldLight.position.set(0, -0.2, 0);
         scene.add(goldLight);
 
         const darkMetal = new THREE.MeshStandardMaterial({ color: 0x222831, roughness: 0.4 });
-        const glowingWater = new THREE.MeshStandardMaterial({ color: 0x00f3ff, transparent: true, opacity: 0.75, roughness: 0.1 });
-        const blueWater = new THREE.MeshStandardMaterial({ color: 0x0055ff, transparent: true, opacity: 0.8, roughness: 0.1 });
+        const glowingWater = new THREE.MeshStandardMaterial({ color: 0x00f3ff, transparent: true, opacity: 0.85, roughness: 0.1 });
         const goldMaterial = new THREE.MeshStandardMaterial({ color: 0xffcc00, metalness: 0.8, roughness: 0.2 });
 
         const base = new THREE.Mesh(new THREE.CylinderGeometry(3.5, 4, 0.8, 32), darkMetal);
@@ -388,8 +393,8 @@
         bowl.position.y = 1.0;
         scene.add(bowl);
 
-        // Νερό στο πάνω μπολ με μπλε χρώμα (blueWater)
-        const bowlWater = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 0.2, 32), blueWater);
+        // Top bowl water using exact glowing material & position
+        const bowlWater = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 0.2, 32), glowingWater);
         bowlWater.position.y = 1.1;
         scene.add(bowlWater);
 
@@ -451,7 +456,7 @@
         function showTooltip(coinObj) {
             const selectedWish = coinObj.data;
             document.getElementById('ttText').innerText = selectedWish.text;
-            document.getElementById('ttAuthor').innerText = `Aπό: ${selectedWish.username || 'Ανώνυμος'} ${selectedWish.isFulfilled ? '• ✨ Εκπληρώθηκε' : ''}`;
+            document.getElementById('ttAuthor').innerText = `By: ${selectedWish.username || 'Anonymous'} ${selectedWish.isFulfilled ? '• ✨ Fulfilled' : ''}`;
 
             const isOwner = currentUser && (selectedWish.username === currentUser.username || selectedWish.userId === currentUser.id);
             const actionsDiv = document.getElementById('ttActions');
@@ -460,12 +465,12 @@
             if (isOwner) {
                 const toggleBtn = document.createElement('button');
                 toggleBtn.className = 'tooltip-btn';
-                toggleBtn.innerText = selectedWish.isFulfilled ? '⏳ Επαναφορά' : '✨ Εκπλήρωση';
+                toggleBtn.innerText = selectedWish.isFulfilled ? '⏳ Reset' : '✨ Fulfill';
                 toggleBtn.onclick = () => toggleFulfilled(selectedWish._id, selectedWish.isFulfilled);
 
                 const delBtn = document.createElement('button');
                 delBtn.className = 'tooltip-btn delete';
-                delBtn.innerText = '🗑️ Διαγραφή';
+                delBtn.innerText = '🗑️ Delete';
                 delBtn.onclick = () => deleteWish(selectedWish._id);
 
                 actionsDiv.appendChild(toggleBtn);
@@ -542,10 +547,10 @@
         window.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('payment') === 'success') {
-                alert('✨ Η πληρωμή ολοκληρώθηκε με επιτυχία! Η ευχή σου ρίχτηκε στο σιντριβάνι.');
+                alert('✨ Payment completed successfully! Your wish was thrown into the fountain.');
                 window.history.replaceState({}, document.title, window.location.pathname);
             } else if (urlParams.get('payment') === 'cancel') {
-                alert('❌ Η πληρωμή ακυρώθηκε.');
+                alert('❌ Payment was cancelled.');
                 window.history.replaceState({}, document.title, window.location.pathname);
             }
         });
@@ -566,7 +571,7 @@
                 const logoutBtn = document.createElement('button');
                 logoutBtn.className = 'btn-neon';
                 logoutBtn.style.cssText = 'border-color:#ff4757; color:#ff4757;';
-                logoutBtn.innerText = 'Αποσύνδεση';
+                logoutBtn.innerText = 'Logout';
                 logoutBtn.onclick = logout;
 
                 authSection.appendChild(userSpan);
@@ -574,7 +579,7 @@
             } else {
                 const loginBtn = document.createElement('button');
                 loginBtn.className = 'btn-neon';
-                loginBtn.innerText = '🔑 Σύνδεση / Εγγραφή';
+                loginBtn.innerText = '🔑 Login / Sign Up';
                 loginBtn.onclick = () => openModal('login');
 
                 authSection.appendChild(loginBtn);
@@ -583,9 +588,9 @@
 
         function openModal(mode) {
             authMode = mode;
-            document.getElementById('modalTitle').innerText = mode === 'login' ? 'Σύνδεση' : 'Εγγραφή';
-            document.getElementById('modalSubmitBtn').innerText = mode === 'login' ? 'Σύνδεση' : 'Εγγραφή';
-            document.getElementById('toggleAuthText').innerText = mode === 'login' ? "Δεν έχεις λογαριασμό; Εγγραφή" : "Έχεις ήδη λογαριασμό; Σύνδεση";
+            document.getElementById('modalTitle').innerText = mode === 'login' ? 'Login' : 'Sign Up';
+            document.getElementById('modalSubmitBtn').innerText = mode === 'login' ? 'Login' : 'Sign Up';
+            document.getElementById('toggleAuthText').innerText = mode === 'login' ? "Don't have an account? Sign Up" : "Already have an account? Login";
             document.getElementById('authModal').style.display = 'flex';
         }
 
@@ -611,7 +616,7 @@
                 updateAuthUI();
                 closeModal();
                 loadWishes();
-                alert(`Καλώς ήρθες ${currentUser.username}!`);
+                alert(`Welcome ${currentUser.username}!`);
             } catch (err) {
                 alert(err.message);
             }
@@ -631,7 +636,7 @@
                 });
 
                 const data = await res.json();
-                if (!res.ok) throw new Error(data.message || 'Αποτυχία ταυτοποίησης');
+                if (!res.ok) throw new Error(data.message || 'Authentication failed');
 
                 localStorage.setItem('token', data.token);
                 localStorage.setItem('user', JSON.stringify(data.user));
@@ -640,7 +645,7 @@
                 updateAuthUI();
                 closeModal();
                 loadWishes();
-                alert(`Καλώς ήρθες ${currentUser.username}!`);
+                alert(`Welcome ${currentUser.username}!`);
             } catch (err) { alert(err.message); }
         });
 
@@ -658,10 +663,10 @@
                 const res = await fetch(`${API_URL}/wishes`);
                 const wishes = await res.json();
                 if (Array.isArray(wishes)) {
-                    document.getElementById('wishCounter').innerText = `✨ Ευχές: ${wishes.length}`;
+                    document.getElementById('wishCounter').innerText = `✨ Wishes: ${wishes.length}`;
                     spawn3DCoins(wishes);
                 }
-            } catch (err) { console.log('Αναμονή για σύνδεση με το backend...'); }
+            } catch (err) { console.log('Waiting for backend connection...'); }
         }
 
         function spawn3DCoins(wishes) {
@@ -702,7 +707,7 @@
             const submitBtn = document.getElementById('submitWishBtn');
 
             try {
-                submitBtn.innerText = 'Ανακατεύθυνση...';
+                submitBtn.innerText = 'Redirecting...';
                 submitBtn.disabled = true;
 
                 const headers = { 'Content-Type': 'application/json' };
@@ -721,14 +726,14 @@
                 const data = await response.json();
 
                 if (!response.ok) {
-                    throw new Error(data.message || 'Αποτυχία δημιουργίας συνεδρίας πληρωμής');
+                    throw new Error(data.message || 'Failed to create checkout session');
                 }
 
                 window.location.href = data.url;
 
             } catch (err) {
-                alert('Σφάλμα: ' + err.message);
-                submitBtn.innerText = 'Ρίξε € (1€)';
+                alert('Error: ' + err.message);
+                submitBtn.innerText = 'Throw € (1€)';
                 submitBtn.disabled = false;
             }
         });
@@ -752,12 +757,12 @@
                     hideTooltip();
                     loadWishes();
                 }
-            } catch (err) { console.error('Σφάλμα κατά την ενημέρωση της ευχής:', err); }
+            } catch (err) { console.error('Error updating wish:', err); }
         }
 
         // DELETE WISH
         async function deleteWish(wishId) {
-            if (!confirm('Θέλεις σίγουρα να διαγράψεις αυτή την ευχή;')) return;
+            if (!confirm('Are you sure you want to delete this wish?')) return;
             const token = localStorage.getItem('token');
             try {
                 const res = await fetch(`${API_URL}/wishes/${wishId}`, {
@@ -769,7 +774,7 @@
                     hideTooltip();
                     loadWishes();
                 }
-            } catch (err) { console.error('Σφάλμα κατά τη διαγραφή της ευχής:', err); }
+            } catch (err) { console.error('Error deleting wish:', err); }
         }
     </script>
 </body>
