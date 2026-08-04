@@ -295,7 +295,7 @@
             <input type="checkbox" id="isPublicCheckbox" checked> Public
         </label>
 
-        <button type="submit" class="btn-throw">Throw € (1€)</button>
+        <button type="submit" class="btn-throw" id="submitWishBtn">Throw € (1€)</button>
     </form>
 
     <!-- Auth Modal -->
@@ -460,7 +460,6 @@
                 `;
             }
 
-            // Project 3D coin position to 2D screen coordinates
             const coinPos = coinObj.mesh.position.clone();
             coinPos.project(camera);
             const x = (coinPos.x * .5 + .5) * window.innerWidth;
@@ -494,7 +493,6 @@
             }
             particles.geometry.attributes.position.needsUpdate = true;
 
-            // Slowly rotate coins in pool
             wishCoins.forEach(c => {
                 c.mesh.rotation.y += 0.01;
             });
@@ -508,6 +506,18 @@
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // CHECK FOR PAYMENT STATUS ON PAGE LOAD
+        window.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('payment') === 'success') {
+                alert('✨ Η πληρωμή ολοκληρώθηκε με επιτυχία! Η ευχή σου ρίχτηκε στο σιντριβάνι.');
+                window.history.replaceState({}, document.title, window.location.pathname);
+            } else if (urlParams.get('payment') === 'cancel') {
+                alert('❌ Η πληρωμή ακυρώθηκε.');
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
         });
 
         // AUTH & APP LOGIC
@@ -612,21 +622,18 @@
         }
 
         function spawn3DCoins(wishes) {
-            // Remove old coins from scene
             wishCoins.forEach(c => scene.remove(c.mesh));
             wishCoins = [];
 
             const coinGeo = new THREE.CylinderGeometry(0.18, 0.18, 0.04, 16);
 
-            wishes.forEach((wish, index) => {
-                // Random position inside bottom pool water
+            wishes.forEach((wish) => {
                 const angle = Math.random() * Math.PI * 2;
                 const radius = 0.5 + Math.random() * 2.2; 
                 const x = Math.cos(angle) * radius;
                 const z = Math.sin(angle) * radius;
-                const y = -0.52 + (Math.random() * 0.05); // resting on water bottom
+                const y = -0.52 + (Math.random() * 0.05);
 
-                // Material color based on fulfilled status
                 const mat = wish.isFulfilled 
                     ? new THREE.MeshStandardMaterial({ color: 0x00ff88, metalness: 0.9, roughness: 0.1 })
                     : goldMaterial;
@@ -641,18 +648,22 @@
             });
         }
 
-        // SUBMIT WISH
+        // SUBMIT WISH VIA STRIPE CHECKOUT SESSION
         document.getElementById('wishForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const text = document.getElementById('wishInput').value;
             const isPublic = document.getElementById('isPublicCheckbox').checked;
             const token = localStorage.getItem('token');
+            const submitBtn = document.getElementById('submitWishBtn');
 
             try {
+                submitBtn.innerText = 'Redirecting...';
+                submitBtn.disabled = true;
+
                 const headers = { 'Content-Type': 'application/json' };
                 if (token) headers['Authorization'] = `Bearer ${token}`;
 
-                const wishRes = await fetch(`${API_URL}/wishes`, {
+                const response = await fetch(`${API_URL}/wishes/create-checkout-session`, {
                     method: 'POST',
                     headers: headers,
                     body: JSON.stringify({
@@ -662,11 +673,20 @@
                     })
                 });
 
-                if (!wishRes.ok) throw new Error('Failed to send wish');
+                const data = await response.json();
 
-                document.getElementById('wishInput').value = '';
-                loadWishes();
-            } catch (err) { alert('Error: ' + err.message); }
+                if (!response.ok) {
+                    throw new Error(data.message || 'Payment session creation failed');
+                }
+
+                // Ανακατεύθυνση στη σελίδα πληρωμής της Stripe
+                window.location.href = data.url;
+
+            } catch (err) {
+                alert('Error: ' + err.message);
+                submitBtn.innerText = 'Throw € (1€)';
+                submitBtn.disabled = false;
+            }
         });
 
         // TOGGLE FULFILLED
