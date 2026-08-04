@@ -856,56 +856,71 @@
 
                 const data = await response.json();
 
-                if (!response.ok) {
-                    throw new Error(data.message || 'Failed to create checkout session');
+                if (response.ok && data.url) {
+                    window.location.href = data.url;
+                } else {
+                    alert(data.message || 'Αποτυχία δημιουργίας συνεδρίας πληρωμής.');
+                    submitBtn.innerText = 'Throw € (1€)';
+                    submitBtn.disabled = false;
                 }
-
-                window.location.href = data.url;
-
             } catch (err) {
-                alert('Error: ' + err.message);
+                console.error(err);
+                alert('Σφάλμα κατά τη σύνδεση με τον διακομιστή.');
                 submitBtn.innerText = 'Throw € (1€)';
                 submitBtn.disabled = false;
             }
         });
 
-        // TOGGLE FULFILLED
+        // TOGGLE FULFILLED & DELETE WISH ACTIONS
         async function toggleFulfilled(wishId, currentStatus) {
             const token = localStorage.getItem('token');
+            if (!token) return alert('Πρέπει να συνδεθείτε!');
+
             try {
                 const res = await fetch(`${API_URL}/wishes/${wishId}`, {
-                    method: 'PUT',
+                    method: 'PATCH',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`
                     },
-                    body: JSON.stringify({
-                        isFulfilled: !currentStatus
-                    })
+                    body: JSON.stringify({ isFulfilled: !currentStatus })
                 });
 
                 if (res.ok) {
                     hideTooltip();
                     loadWishes();
+                } else {
+                    const errData = await res.json();
+                    alert(errData.message || 'Αποτυχία ενημέρωσης.');
                 }
-            } catch (err) { console.error('Error updating wish:', err); }
+            } catch (err) {
+                alert('Σφάλμα κατά την ενημέρωση της ευχής.');
+            }
         }
 
-        // DELETE WISH
         async function deleteWish(wishId) {
-            if (!confirm('Are you sure you want to delete this wish?')) return;
+            if (!confirm('Είστε σίγουροι ότι θέλετε να διαγράψετε αυτή την ευχή;')) return;
             const token = localStorage.getItem('token');
+            if (!token) return alert('Πρέπει να συνδεθείτε!');
+
             try {
                 const res = await fetch(`${API_URL}/wishes/${wishId}`, {
                     method: 'DELETE',
-                    headers: { 'Authorization': `Bearer ${token}` }
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
                 });
 
                 if (res.ok) {
                     hideTooltip();
                     loadWishes();
+                } else {
+                    const errData = await res.json();
+                    alert(errData.message || 'Αποτυχία διαγραφής.');
                 }
-            } catch (err) { console.error('Error deleting wish:', err); }
+            } catch (err) {
+                alert('Σφάλμα κατά τη διαγραφή της ευχής.');
+            }
         }
     </script>
 </body>
