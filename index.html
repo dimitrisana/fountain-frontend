@@ -721,7 +721,9 @@
                     body: JSON.stringify({
                         text,
                         isPublic,
-                        color: '#00f3ff'
+                        color: '#00f3ff',
+                        username: currentUser ? currentUser.username : 'Anonymous',
+                        userId: currentUser ? currentUser.id : ''
                     })
                 });
 
