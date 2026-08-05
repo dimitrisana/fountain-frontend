@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Wish Fountain</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
-    <!-- Import Three.js -->
+    <!-- Import Three.js & Controls -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <style>
@@ -156,6 +156,115 @@
             box-shadow: 0 0 25px rgba(255, 153, 0, 0.8);
         }
 
+        /* TOOLTIP POPUP */
+        #coinTooltip {
+            position: absolute;
+            display: none;
+            background: rgba(10, 15, 28, 0.95);
+            border: 1px solid #00f3ff;
+            box-shadow: 0 0 20px rgba(0, 243, 255, 0.4);
+            padding: 12px 16px;
+            border-radius: 12px;
+            color: #fff;
+            z-index: 50;
+            pointer-events: auto;
+            max-width: 260px;
+            backdrop-filter: blur(8px);
+            transform: translate(-50%, -100%);
+        }
+
+        #coinTooltip .wish-text {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 4px;
+        }
+
+        #coinTooltip .wish-author {
+            font-size: 0.75rem;
+            color: #8fa0be;
+            margin-bottom: 8px;
+        }
+
+        .tooltip-btn {
+            background: rgba(0, 243, 255, 0.15);
+            border: 1px solid #00f3ff;
+            color: #00f3ff;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            cursor: pointer;
+        }
+
+        .tooltip-btn.delete {
+            border-color: #ff4757;
+            color: #ff4757;
+            background: rgba(255, 71, 87, 0.15);
+        }
+
+        /* MODAL STYLES */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .modal-content {
+            background: #0d1322;
+            border: 1px solid rgba(0, 243, 255, 0.3);
+            box-shadow: 0 0 30px rgba(0, 243, 255, 0.2);
+            padding: 30px;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 380px;
+            position: relative;
+            text-align: center;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 12px; right: 18px;
+            color: #aaa;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .form-group { margin-bottom: 15px; text-align: left; }
+        .form-group label { display: block; margin-bottom: 5px; font-size: 0.85rem; color: #8fa0be; }
+        .form-group input {
+            width: 100%; padding: 10px; background: #050811;
+            border: 1px solid rgba(0, 243, 255, 0.2); border-radius: 8px; color: #fff; outline: none;
+        }
+        .form-group input:focus { border-color: #00f3ff; }
+
+        .btn-submit-modal {
+            width: 100%; padding: 12px;
+            background: linear-gradient(90deg, #00f3ff, #0077ff);
+            border: none; border-radius: 8px; color: #fff; font-weight: bold; cursor: pointer;
+        }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            margin: 18px 0;
+            color: #6a7b95;
+            font-size: 0.8rem;
+        }
+        .divider::before, .divider::after {
+            content: ''; flex: 1; height: 1px; background: rgba(0, 243, 255, 0.2);
+        }
+        .divider span { padding: 0 10px; }
+
+        .google-btn-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 10px;
+        }
+
         /* RESPONSIVE MOBILE FIXES */
         @media (max-width: 600px) {
             .top-bar { padding: 10px 15px; gap: 8px; }
@@ -186,6 +295,9 @@
                 font-size: 0.75rem;
                 border-radius: 18px;
             }
+
+            .modal-content { width: 95%; padding: 20px 15px; }
+            #coinTooltip { max-width: 200px; padding: 8px 12px; }
         }
     </style>
 </head>
@@ -211,13 +323,56 @@
         <button type="submit" class="btn-throw" id="submitWishBtn">Throw (1€)</button>
     </form>
 
-    <!-- Three.js Fountain Logic -->
+    <div id="coinTooltip">
+        <div class="wish-text" id="tooltipText">Wish text goes here</div>
+        <div class="wish-author" id="tooltipAuthor">by Anonymous</div>
+        <div class="actions">
+            <button class="tooltip-btn delete" id="tooltipDeleteBtn" style="display:none;">Delete</button>
+        </div>
+    </div>
+
+    <div class="modal" id="authModal">
+        <div class="modal-content">
+            <span class="close-btn" id="closeAuthModal">&times;</span>
+            <h2 style="margin-bottom: 20px; color: #00f3ff;" id="modalTitle">Login</h2>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="authEmail" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="authPassword" required>
+                </div>
+                <button type="submit" class="btn-submit-modal" id="authSubmitBtn">Login</button>
+            </form>
+            
+            <div class="divider"><span>OR</span></div>
+            <div class="google-btn-container" id="googleBtnContainer"></div>
+
+            <p style="margin-top: 15px; font-size: 0.8rem; color: #8fa0be;">
+                <span id="toggleAuthMode" style="cursor:pointer;">Don't have an account? Sign Up</span>
+            </p>
+        </div>
+    </div>
+
+    <div class="modal" id="aboutModal">
+        <div class="modal-content">
+            <span class="close-btn" id="closeAboutModal">&times;</span>
+            <h2 style="margin-bottom: 15px; color: #ffaa00;">About Wish Fountain</h2>
+            <p style="color: #8fa0be; font-size: 0.9rem; line-height: 1.5;">
+                Throw a coin into the digital fountain and make a wish. Your wish will be stored forever in the digital realm.
+            </p>
+        </div>
+    </div>
+
+    <!-- THREE.JS SCENE LOGIC -->
     <script>
         const container = document.getElementById('canvas-container');
 
         // Scene, Camera, Renderer
         const scene = new THREE.Scene();
-        scene.fog = new THREE.FogExp2(0x050508, 0.05);
+        scene.fog = new THREE.FogExp2(0x050508, 0.03);
 
         const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
         camera.position.set(0, 3, 5);
@@ -232,43 +387,60 @@
         controls.maxPolarAngle = Math.PI / 2.1;
 
         // Lights
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
         scene.add(ambientLight);
 
-        const cyanLight = new THREE.PointLight(0x00f3ff, 2, 10);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
+        dirLight.position.set(5, 10, 7);
+        scene.add(dirLight);
+
+        const cyanLight = new THREE.PointLight(0x00f3ff, 3, 12);
         cyanLight.position.set(0, 2, 0);
         scene.add(cyanLight);
 
         // Fountain Mesh
         const fountainGroup = new THREE.Group();
 
-        // Outer Pool Base
+        const darkMat = new THREE.MeshStandardMaterial({ 
+            color: 0x1e293b, 
+            roughness: 0.4, 
+            metalness: 0.2 
+        });
+
+        const waterMat = new THREE.MeshStandardMaterial({ 
+            color: 0x00f3ff, 
+            emissive: 0x0088aa, 
+            roughness: 0.1, 
+            metalness: 0.1,
+            transparent: true, 
+            opacity: 0.9 
+        });
+
+        // Base
         const baseGeo = new THREE.CylinderGeometry(2.5, 3, 0.4, 32);
-        const darkMat = new THREE.MeshStandardMaterial({ color: 0x111622, roughness: 0.3, metalness: 0.8 });
         const base = new THREE.Mesh(baseGeo, darkMat);
         base.position.y = -1;
         fountainGroup.add(base);
 
-        // Outer Water Surface
+        // Water
         const waterGeo = new THREE.CylinderGeometry(2.4, 2.4, 0.1, 32);
-        const waterMat = new THREE.MeshStandardMaterial({ color: 0x00f3ff, roughness: 0.1, metalness: 0.9, transparent: true, opacity: 0.85 });
         const water = new THREE.Mesh(waterGeo, waterMat);
         water.position.y = -0.8;
         fountainGroup.add(water);
 
-        // Center Pedestal
+        // Pedestal
         const pedestalGeo = new THREE.CylinderGeometry(0.3, 0.4, 1.2, 16);
         const pedestal = new THREE.Mesh(pedestalGeo, darkMat);
         pedestal.position.y = -0.2;
         fountainGroup.add(pedestal);
 
-        // Upper Bowl
+        // Bowl
         const bowlGeo = new THREE.CylinderGeometry(1.2, 0.8, 0.3, 32);
         const bowl = new THREE.Mesh(bowlGeo, darkMat);
         bowl.position.y = 0.4;
         fountainGroup.add(bowl);
 
-        // Upper Water Layer
+        // Top Water
         const topWaterGeo = new THREE.CylinderGeometry(1.15, 1.15, 0.05, 32);
         const topWater = new THREE.Mesh(topWaterGeo, waterMat);
         topWater.position.y = 0.53;
@@ -298,9 +470,9 @@
 
         const particleMat = new THREE.PointsMaterial({
             color: 0xffffff,
-            size: 0.05,
+            size: 0.06,
             transparent: true,
-            opacity: 0.8
+            opacity: 0.9
         });
 
         const particleSystem = new THREE.Points(particlesGeo, particleMat);
@@ -310,16 +482,14 @@
         function animate() {
             requestAnimationFrame(animate);
 
-            // Water particle movement
             const pos = particleSystem.geometry.attributes.position.array;
             for (let i = 0; i < particleCount; i++) {
                 pos[i * 3] += velocities[i].x;
                 pos[i * 3 + 1] += velocities[i].y;
                 pos[i * 3 + 2] += velocities[i].z;
 
-                velocities[i].y -= 0.0018; // gravity
+                velocities[i].y -= 0.0018;
 
-                // Reset particle
                 if (pos[i * 3 + 1] < 0.5) {
                     pos[i * 3] = 0;
                     pos[i * 3 + 1] = 0.55;
@@ -344,6 +514,15 @@
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
+
+        // Simple Modals Toggle
+        const authModal = document.getElementById('authModal');
+        const aboutModal = document.getElementById('aboutModal');
+
+        document.getElementById('authBtn').onclick = () => authModal.style.display = 'flex';
+        document.getElementById('aboutBtn').onclick = () => aboutModal.style.display = 'flex';
+        document.getElementById('closeAuthModal').onclick = () => authModal.style.display = 'none';
+        document.getElementById('closeAboutModal').onclick = () => aboutModal.style.display = 'none';
     </script>
 </body>
 </html>
