@@ -11,66 +11,9 @@
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
- /* --- MOBILE RESPONSIVE STYLES --- */
-        @media (max-width: 600px) {
-            .top-bar {
-                padding: 10px 15px;
-                gap: 8px;
-            }
-
-            .badge {
-                padding: 5px 10px;
-                font-size: 0.75rem;
-            }
-
-            .btn-neon {
-                padding: 6px 12px;
-                font-size: 0.75rem;
-            }
-
-            .top-right-controls {
-                gap: 6px;
-            }
-
-            .prompt-title {
-                top: 70px;
-                font-size: 0.75rem;
-                padding: 5px 14px;
-                width: 85%;
-                text-align: center;
-            }
-
-            .bottom-bar {
-                bottom: 15px;
-                width: 95%;
-                padding: 4px 8px;
-            }
-
-            .bottom-bar input[type="text"] {
-                padding: 8px 10px;
-                font-size: 0.85rem;
-            }
-
-            .checkbox-container {
-                font-size: 0.7rem;
-                margin: 0 5px;
-            }
-
-            .btn-throw {
-                padding: 8px 12px;
-                font-size: 0.8rem;
-            }
-
-            .modal-content {
-                width: 95%;
-                padding: 20px 15px;
-            }
-
-            #coinTooltip {
-                max-width: 200px;
-                padding: 8px 12px;
-            }
-        }   
+    <!-- Stripe SDK -->
+    <script src="https://js.stripe.com/v3/"></script>
+    
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; }
 
@@ -325,6 +268,67 @@
             display: flex;
             justify-content: center;
             margin-top: 10px;
+        }
+
+        /* --- MOBILE RESPONSIVE STYLES --- */
+        @media (max-width: 600px) {
+            .top-bar {
+                padding: 10px 15px;
+                gap: 8px;
+            }
+
+            .badge {
+                padding: 5px 10px;
+                font-size: 0.75rem;
+            }
+
+            .btn-neon {
+                padding: 6px 12px;
+                font-size: 0.75rem;
+            }
+
+            .top-right-controls {
+                gap: 6px;
+            }
+
+            .prompt-title {
+                top: 70px;
+                font-size: 0.75rem;
+                padding: 5px 14px;
+                width: 85%;
+                text-align: center;
+            }
+
+            .bottom-bar {
+                bottom: 15px;
+                width: 95%;
+                padding: 4px 8px;
+            }
+
+            .bottom-bar input[type="text"] {
+                padding: 8px 10px;
+                font-size: 0.85rem;
+            }
+
+            .checkbox-container {
+                font-size: 0.7rem;
+                margin: 0 5px;
+            }
+
+            .btn-throw {
+                padding: 8px 12px;
+                font-size: 0.8rem;
+            }
+
+            .modal-content {
+                width: 95%;
+                padding: 20px 15px;
+            }
+
+            #coinTooltip {
+                max-width: 200px;
+                padding: 8px 12px;
+            }
         }
     </style>
 </head>
@@ -788,7 +792,6 @@
 
         function updateAuthUI() {
             const authSection = document.getElementById('authSection');
-            
             const aboutBtn = document.getElementById('aboutBtn');
             authSection.innerHTML = '';
             authSection.appendChild(aboutBtn);
@@ -827,6 +830,14 @@
         function toggleAuthMode() { openModal(authMode === 'login' ? 'signup' : 'login'); }
         function closeModal() { document.getElementById('authModal').style.display = 'none'; }
 
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            currentUser = null;
+            updateAuthUI();
+            loadWishes();
+        }
+
         // GOOGLE AUTH HANDLER
         async function handleGoogleCredentialResponse(response) {
             try {
@@ -856,9 +867,9 @@
             e.preventDefault();
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
-            const endpoint = authMode === 'login' ? '/auth/login' : '/auth/signup';
 
             try {
+                const endpoint = authMode === 'login' ? '/auth/login' : '/auth/register';
                 const res = await fetch(`${API_URL}${endpoint}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -875,61 +886,12 @@
                 updateAuthUI();
                 closeModal();
                 loadWishes();
-                alert(`Welcome ${currentUser.username}!`);
-            } catch (err) { alert(err.message); }
+            } catch (err) {
+                alert(err.message);
+            }
         });
 
-        function logout() {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            currentUser = null;
-            updateAuthUI();
-            loadWishes();
-        }
-
-        // LOAD WISHES AND CREATE 3D COINS
-        async function loadWishes() {
-            try {
-                const token = localStorage.getItem('token');
-                const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-                const res = await fetch(`${API_URL}/wishes`, { headers });
-                const wishes = await res.json();
-
-                if (!res.ok) throw new Error(wishes.message || 'Failed to fetch wishes');
-
-                document.getElementById('wishCounter').innerText = `✨ Wishes: ${wishes.length}`;
-
-                wishCoins.forEach(c => scene.remove(c.mesh));
-                wishCoins = [];
-                coinMeshes = [];
-
-                const coinGeo = new THREE.CylinderGeometry(0.18, 0.18, 0.04, 16);
-
-                wishes.forEach((wish, idx) => {
-                    const mat = wish.isFulfilled ? greenFulfilledMaterial : goldMaterial;
-                    const mesh = new THREE.Mesh(coinGeo, mat);
-
-                    const angle = idx * 0.8;
-                    const radius = 0.5 + ((idx * 0.3) % 2.3);
-                    mesh.position.set(
-                        Math.cos(angle) * radius,
-                        -0.78,
-                        Math.sin(angle) * radius
-                    );
-                    mesh.rotation.x = Math.PI / 2;
-
-                    scene.add(mesh);
-
-                    const coinObj = { mesh, data: wish };
-                    wishCoins.push(coinObj);
-                    coinMeshes.push(mesh);
-                });
-            } catch (err) {
-                console.error('Error loading wishes:', err);
-            }
-        }
-
-        // --- SUBMIT WISH / STRIPE CHECKOUT ---
+        // WISH SUBMISSION VIA STRIPE
         document.getElementById('wishForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const text = document.getElementById('wishInput').value.trim();
@@ -939,44 +901,98 @@
 
             try {
                 const token = localStorage.getItem('token');
-                const headers = { 
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                };
+                const headers = { 'Content-Type': 'application/json' };
+                if (token) headers['Authorization'] = `Bearer ${token}`;
 
-                const res = await fetch(`${API_URL}/wishes/checkout`, {
+                const res = await fetch(`${API_URL}/wishes/create-checkout-session`, {
                     method: 'POST',
                     headers,
                     body: JSON.stringify({ text, isPublic })
                 });
 
                 const data = await res.json();
-                if (!res.ok) throw new Error(data.message || 'Checkout creation failed');
+                if (!res.ok) throw new Error(data.message || 'Failed to initiate payment');
 
                 if (data.url) {
                     window.location.href = data.url;
+                } else if (data.id) {
+                    const stripe = Stripe(data.stripePublicKey || 'pk_test_placeholder');
+                    await stripe.redirectToCheckout({ sessionId: data.id });
                 }
             } catch (err) {
                 alert(err.message);
             }
         });
 
-        // --- MANAGEMENT ACTIONS ---
-        async function toggleFulfilled(wishId, currentStatus) {
+        // FETCH AND RENDER COINS IN THE FOUNTAIN
+        async function loadWishes() {
             try {
                 const token = localStorage.getItem('token');
-                const res = await fetch(`${API_URL}/wishes/${wishId}`, {
+                const headers = {};
+                if (token) headers['Authorization'] = `Bearer ${token}`;
+
+                const res = await fetch(`${API_URL}/wishes`, { headers });
+                const wishes = await res.json();
+
+                if (Array.isArray(wishes)) {
+                    document.getElementById('wishCounter').innerText = `✨ Wishes: ${wishes.length}`;
+                    renderCoins(wishes);
+                }
+            } catch (err) {
+                console.error('Error loading wishes:', err);
+            }
+        }
+
+        function renderCoins(wishes) {
+            // Clean up existing coin meshes
+            wishCoins.forEach(c => scene.remove(c.mesh));
+            wishCoins = [];
+            coinMeshes = [];
+
+            const coinGeo = new THREE.CylinderGeometry(0.18, 0.18, 0.04, 16);
+
+            wishes.forEach((wish, index) => {
+                const mat = wish.isFulfilled ? greenFulfilledMaterial : goldMaterial;
+                const coinMesh = new THREE.Mesh(coinGeo, mat);
+
+                // Deterministic pseudo-random positions based on wish ID/index on the pool base
+                const angle = (index * 2.4) % (Math.PI * 2);
+                const radius = 0.5 + ((index * 0.3) % 2.3);
+
+                coinMesh.position.set(
+                    Math.cos(angle) * radius,
+                    -0.78 + (Math.random() * 0.02), // Just above pool bottom
+                    Math.sin(angle) * radius
+                );
+
+                coinMesh.rotation.x = Math.PI / 2;
+                coinMesh.rotation.z = Math.random() * Math.PI;
+
+                scene.add(coinMesh);
+                wishCoins.push({ mesh: coinMesh, data: wish });
+                coinMeshes.push(coinMesh);
+            });
+        }
+
+        async function toggleFulfilled(wishId, currentState) {
+            try {
+                const token = localStorage.getItem('token');
+                const res = await fetch(`${API_URL}/wishes/${wishId}/fulfill`, {
                     method: 'PATCH',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`
                     },
-                    body: JSON.stringify({ isFulfilled: !currentStatus })
+                    body: JSON.stringify({ isFulfilled: !currentState })
                 });
 
-                if (!res.ok) throw new Error('Failed to update wish');
-                hideTooltip();
-                loadWishes();
+                if (res.ok) {
+                    hideTooltip();
+                    loadWishes();
+                } else {
+                    const err = await res.json();
+                    alert(err.message || 'Action failed');
+                }
             } catch (err) {
                 alert(err.message);
             }
@@ -992,9 +1008,13 @@
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
 
-                if (!res.ok) throw new Error('Failed to delete wish');
-                hideTooltip();
-                loadWishes();
+                if (res.ok) {
+                    hideTooltip();
+                    loadWishes();
+                } else {
+                    const err = await res.json();
+                    alert(err.message || 'Delete failed');
+                }
             } catch (err) {
                 alert(err.message);
             }
