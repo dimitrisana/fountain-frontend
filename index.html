@@ -23,14 +23,14 @@
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // Πραγματικές ρυθμίσεις Firebase Project με το σωστό API Key
+        // Πραγματικές ρυθμίσεις Firebase Project
         const firebaseConfig = {
             apiKey: "AIzaSyByNdHJTyLlgtrJ3flqeAG_OK6HGpbjtQ",
             authDomain: "fountain-f98d3.firebaseapp.com",
             projectId: "fountain-f98d3",
-            storageBucket: "fountain-f98d3.appspot.com",
+            storageBucket: "fountain-f98d3.firebasestorage.app",
             messagingSenderId: "840291797731",
-            appId: "1:840291797731:web:YzE5OGFiOTEtZT..." // Αντιγράψτε το πλήρες appId αν διαφέρει στο δικό σας Firebase Console
+            appId: "1:840291797731:web:76b44778a6ef724f0253d6"
         };
 
         const app = initializeApp(firebaseConfig);
@@ -65,7 +65,7 @@
         .btn-throw { background: linear-gradient(90deg, #ff9900, #ffbb00); border: none; color: #000; font-weight: bold; padding: 10px 18px; border-radius: 22px; cursor: pointer; box-shadow: 0 0 15px rgba(255, 153, 0, 0.5); transition: 0.3s; white-space: nowrap; flex-shrink: 0; font-size: 0.9rem; }
 
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); justify-content: center; align-items: center; z-index: 100; }
-        .modal-content { background: #0d1322; border: 1px solid rgba(0, 243, 255, 0.3); box-shadow: 0 0 30px rgba(0, 243, 255, 0.2); padding: 30px; border-radius: 16px; width: 90%; max-width: 400px; position: relative; text-align: center; }
+        .modal-content { background: #0d1322; border: 1px solid rgba(0, 243, 255, 0.3); box-shadow: 0 0 30px rgba(0, 243, 255, 0.2); padding: 30px; border-radius: 16px; width: 90%; max-width: 450px; position: relative; text-align: center; }
         .close-btn { position: absolute; top: 12px; right: 18px; color: #aaa; font-size: 1.5rem; cursor: pointer; }
 
         .form-group { margin-bottom: 12px; text-align: left; }
@@ -80,6 +80,9 @@
         .divider { display: flex; align-items: center; margin: 15px 0; color: #6a7b95; font-size: 0.75rem; }
         .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: rgba(0, 243, 255, 0.2); }
         .divider span { padding: 0 8px; }
+
+        .about-text { text-align: left; color: #a0aec0; font-size: 0.9rem; line-height: 1.6; margin-top: 10px; }
+        .about-text strong { color: #00f3ff; }
     </style>
 </head>
 <body>
@@ -104,6 +107,7 @@
         <button type="submit" class="btn-throw" id="submitWishBtn">Throw (1€)</button>
     </form>
 
+    <!-- Modal Σύνδεσης -->
     <div class="modal" id="authModal">
         <div class="modal-content">
             <span class="close-btn" id="closeAuthModal">&times;</span>
@@ -132,6 +136,27 @@
 
             <button class="btn-google" id="googleLoginBtn">Sign in with Google</button>
             <div class="error-msg" id="authGeneralError"></div>
+        </div>
+    </div>
+
+    <!-- Modal About -->
+    <div class="modal" id="aboutModal">
+        <div class="modal-content">
+            <span class="close-btn" id="closeAboutModal">&times;</span>
+            <h2 style="margin-bottom: 15px; color: #ffaa00;">✨ Wish Fountain</h2>
+            <div class="about-text">
+                <p style="margin-bottom: 12px;">
+                    Καλώς ήρθατε στο <strong>Wish Fountain</strong>, ένα ψηφιακό σιντριβάνι ευχών όπου η ενέργεια των ανθρώπων από όλο τον κόσμο συναντιέται.
+                </p>
+                <p style="margin-bottom: 12px;">
+                    🎯 <strong>Πώς λειτουργεί;</strong><br>
+                    Κάθε φορά που ρίχνετε ένα νόμισμα (1€), η ευχή σας καταγράφεται για πάντα στο σιντριβάνι.
+                </p>
+                <p>
+                    🌟 <strong>Public ή Private:</strong><br>
+                    Επιλέξτε αν θέλετε η ευχή σας να εμφανίζεται δημόσια στην κοινότητα ή να παραμείνει η δική σας κρυφή ελπίδα.
+                </p>
+            </div>
         </div>
     </div>
 
@@ -395,7 +420,10 @@
             };
         }
 
+        // Modals Event Listeners
         const authModal = document.getElementById('authModal');
+        const aboutModal = document.getElementById('aboutModal');
+
         document.getElementById('authBtn').onclick = () => {
             if (window.firebaseApp && window.firebaseApp.auth.currentUser) {
                 if (confirm("Θέλετε να αποσυνδεθείτε;")) window.firebaseApp.signOut(window.firebaseApp.auth);
@@ -403,7 +431,10 @@
                 authModal.style.display = 'flex';
             }
         };
+
+        document.getElementById('aboutBtn').onclick = () => aboutModal.style.display = 'flex';
         document.getElementById('closeAuthModal').onclick = () => authModal.style.display = 'none';
+        document.getElementById('closeAboutModal').onclick = () => aboutModal.style.display = 'none';
     </script>
 </body>
 </html>
