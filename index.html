@@ -23,14 +23,14 @@
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // Πραγματικές ρυθμίσεις Firebase Project
+        // Πραγματικές ρυθμίσεις Firebase Project με το σωστό API Key
         const firebaseConfig = {
-            apiKey: "AIzaSy...", // Βεβαιώσου ότι έχεις βάλει το πλήρες API Key σου από το Firebase
+            apiKey: "AIzaSyByNdHJTyLlgtrJ3flqeAG_OK6HGpbjtQ",
             authDomain: "fountain-f98d3.firebaseapp.com",
             projectId: "fountain-f98d3",
             storageBucket: "fountain-f98d3.appspot.com",
             messagingSenderId: "840291797731",
-            appId: "1:840291797731:web:YOUR_APP_ID"
+            appId: "1:840291797731:web:YzE5OGFiOTEtZT..." // Αντιγράψτε το πλήρες appId αν διαφέρει στο δικό σας Firebase Console
         };
 
         const app = initializeApp(firebaseConfig);
@@ -349,7 +349,7 @@
                 }
             };
 
-            // Άμεσο Google Sign-In με Popup & Alert για άμεση διάγνωση
+            // Google Sign-In με Popup
             document.getElementById('googleLoginBtn').onclick = async () => {
                 const genErr = document.getElementById('authGeneralError');
                 genErr.style.display = 'none';
@@ -361,7 +361,6 @@
                     const errorMsg = `Σφάλμα (${err.code}): ${err.message}`;
                     genErr.innerText = errorMsg;
                     genErr.style.display = 'block';
-                    alert(errorMsg); // Εμφάνιση παραθύρου για άμεση ειδοποίηση
                 }
             };
 
