@@ -270,65 +270,18 @@
             margin-top: 10px;
         }
 
-        /* --- MOBILE RESPONSIVE STYLES --- */
         @media (max-width: 600px) {
-            .top-bar {
-                padding: 10px 15px;
-                gap: 8px;
-            }
-
-            .badge {
-                padding: 5px 10px;
-                font-size: 0.75rem;
-            }
-
-            .btn-neon {
-                padding: 6px 12px;
-                font-size: 0.75rem;
-            }
-
-            .top-right-controls {
-                gap: 6px;
-            }
-
-            .prompt-title {
-                top: 70px;
-                font-size: 0.75rem;
-                padding: 5px 14px;
-                width: 85%;
-                text-align: center;
-            }
-
-            .bottom-bar {
-                bottom: 15px;
-                width: 95%;
-                padding: 4px 8px;
-            }
-
-            .bottom-bar input[type="text"] {
-                padding: 8px 10px;
-                font-size: 0.85rem;
-            }
-
-            .checkbox-container {
-                font-size: 0.7rem;
-                margin: 0 5px;
-            }
-
-            .btn-throw {
-                padding: 8px 12px;
-                font-size: 0.8rem;
-            }
-
-            .modal-content {
-                width: 95%;
-                padding: 20px 15px;
-            }
-
-            #coinTooltip {
-                max-width: 200px;
-                padding: 8px 12px;
-            }
+            .top-bar { padding: 10px 15px; gap: 8px; }
+            .badge { padding: 5px 10px; font-size: 0.75rem; }
+            .btn-neon { padding: 6px 12px; font-size: 0.75rem; }
+            .top-right-controls { gap: 6px; }
+            .prompt-title { top: 70px; font-size: 0.75rem; padding: 5px 14px; width: 85%; text-align: center; }
+            .bottom-bar { bottom: 15px; width: 95%; padding: 4px 8px; }
+            .bottom-bar input[type="text"] { padding: 8px 10px; font-size: 0.85rem; }
+            .checkbox-container { font-size: 0.7rem; margin: 0 5px; }
+            .btn-throw { padding: 8px 12px; font-size: 0.8rem; }
+            .modal-content { width: 95%; padding: 20px 15px; }
+            #coinTooltip { max-width: 200px; padding: 8px 12px; }
         }
     </style>
 </head>
@@ -361,18 +314,14 @@
         <button type="submit" class="btn-throw" id="submitWishBtn">Throw € (1€)</button>
     </form>
 
-    <!-- About / Mission Modal -->
+    <!-- About Modal -->
     <div class="modal" id="aboutModal">
         <div class="modal-content" style="max-width: 500px; text-align: left;">
             <span class="close-btn" id="closeAboutModalBtn">&times;</span>
             <h2 style="color:#00f3ff; margin-bottom:15px; text-align:center;">About The Fountain</h2>
             
             <p style="font-size:0.9rem; color:#d1d5db; line-height:1.6; margin-bottom:12px;">
-                Welcome to the <strong>World’s First 3D Digital Wishing Fountain</strong>, brought to life through advanced AI prompt intelligence (Gemini).
-            </p>
-
-            <p style="font-size:0.9rem; color:#d1d5db; line-height:1.6; margin-bottom:12px;">
-                Here, every wish matters. You hold complete control over your journey:
+                Welcome to the <strong>World’s First 3D Digital Wishing Fountain</strong>.
             </p>
 
             <ul style="font-size:0.85rem; color:#8fa0be; margin-left:20px; margin-bottom:15px; line-height:1.6;">
@@ -384,7 +333,7 @@
             <div style="background: rgba(0, 243, 255, 0.05); border: 1px solid rgba(0, 243, 255, 0.3); padding: 12px; border-radius: 10px; margin-top: 15px;">
                 <h4 style="color:#ffcc00; margin-bottom:5px; font-size:0.95rem;">🎗️ Our Mission</h4>
                 <p style="font-size:0.85rem; color:#d1d5db; line-height:1.5;">
-                    We believe in the power of collective hope. Once our fountain reaches a major milestone of wishes, a <strong>significant portion of proceeds will be donated directly to fight cancer</strong> and support life-saving research.
+                    Once our fountain reaches a major milestone of wishes, a <strong>significant portion of proceeds will be donated directly to fight cancer</strong>.
                 </p>
             </div>
         </div>
@@ -396,7 +345,6 @@
             <span class="close-btn" id="closeModalBtn">&times;</span>
             <h2 id="modalTitle" style="margin-bottom:20px; color:#00f3ff;">Login</h2>
 
-            <!-- GOOGLE SIGN IN BUTTON -->
             <div class="google-btn-container">
                 <div id="g_id_onload"
                     data-client_id="1093667690614-7pk8daqkqnfo4ei5rks0sqoesopsgjj0.apps.googleusercontent.com"
@@ -429,17 +377,19 @@
         const API_URL = 'https://fountain-backend-mgxf.onrender.com/api';
         let authMode = 'login';
         let currentUser = JSON.parse(localStorage.getItem('user')) || null;
-        let wishCoins = []; // Array of { mesh, data }
-        let coinMeshes = []; // Cached meshes for fast raycasting
-        let activeCoinObj = null; // Currently hovered coin
+        let wishCoins = [];
+        let coinMeshes = [];
+        let activeCoinObj = null;
 
         // THREE.JS SCENE SETUP
         const container = document.getElementById('canvas-container');
         const scene = new THREE.Scene();
-        scene.fog = new THREE.FogExp2(0x050508, 0.025);
+        scene.fog = new THREE.FogExp2(0x050508, 0.02);
 
+        // Adjust Camera to show pool interior clearly
         const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 5, 11);
+        camera.position.set(0, 7, 10);
+        camera.lookAt(0, 0, 0);
 
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
@@ -448,36 +398,33 @@
 
         const controls = new THREE.OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
+        controls.target.set(0, 0, 0);
         controls.maxPolarAngle = Math.PI / 2 - 0.05;
 
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+        // LIGHTING ADJUSTMENTS
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
         scene.add(ambientLight);
 
-        // Light for bottom pool
-        const cyanLight = new THREE.PointLight(0x00f3ff, 3, 15);
-        cyanLight.position.set(0, 0.2, 0);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(5, 12, 8);
+        scene.add(dirLight);
+
+        const cyanLight = new THREE.PointLight(0x00f3ff, 2.5, 12);
+        cyanLight.position.set(0, 0.5, 0);
         scene.add(cyanLight);
 
-        // Dedicated light for top bowl water
-        const cyanLightTop = new THREE.PointLight(0x00f3ff, 2.5, 8);
-        cyanLightTop.position.set(0, 1.8, 0);
-        scene.add(cyanLightTop);
+        const darkMetal = new THREE.MeshStandardMaterial({ color: 0x1f242d, roughness: 0.5 });
+        const glowingWater = new THREE.MeshStandardMaterial({ color: 0x00d8ff, transparent: true, opacity: 0.75, roughness: 0.1 });
+        const goldMaterial = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.9, roughness: 0.1 });
+        const greenFulfilledMaterial = new THREE.MeshStandardMaterial({ color: 0x00ff88, metalness: 0.6, roughness: 0.1, emissive: 0x00ff88, emissiveIntensity: 0.6 });
 
-        const goldLight = new THREE.PointLight(0xffaa00, 2, 10);
-        goldLight.position.set(0, -0.2, 0);
-        scene.add(goldLight);
-
-        const darkMetal = new THREE.MeshStandardMaterial({ color: 0x222831, roughness: 0.4 });
-        const glowingWater = new THREE.MeshStandardMaterial({ color: 0x00f3ff, transparent: true, opacity: 0.85, roughness: 0.1 });
-        const goldMaterial = new THREE.MeshStandardMaterial({ color: 0xffcc00, metalness: 0.8, roughness: 0.2 });
-        const greenFulfilledMaterial = new THREE.MeshStandardMaterial({ color: 0x00ff88, metalness: 0.5, roughness: 0.1, emissive: 0x00ff88, emissiveIntensity: 0.5 });
-
-        const base = new THREE.Mesh(new THREE.CylinderGeometry(3.5, 4, 0.8, 32), darkMetal);
-        base.position.y = -1;
+        // FOUNTAIN GEOMETRY
+        const base = new THREE.Mesh(new THREE.CylinderGeometry(3.5, 3.8, 0.8, 32), darkMetal);
+        base.position.y = -1.1;
         scene.add(base);
 
-        const poolWater = new THREE.Mesh(new THREE.CylinderGeometry(3.3, 3.3, 0.6, 32), glowingWater);
-        poolWater.position.y = -0.8;
+        const poolWater = new THREE.Mesh(new THREE.CylinderGeometry(3.3, 3.3, 0.4, 32), glowingWater);
+        poolWater.position.y = -0.75;
         scene.add(poolWater);
 
         const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.6, 1.8, 16), darkMetal);
@@ -488,8 +435,7 @@
         bowl.position.y = 1.0;
         scene.add(bowl);
 
-        // Top bowl water using exact glowing material & position
-        const bowlWater = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 0.2, 32), glowingWater);
+        const bowlWater = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 0.15, 32), glowingWater);
         bowlWater.position.y = 1.1;
         scene.add(bowlWater);
 
@@ -516,7 +462,7 @@
         const particles = new THREE.Points(pGeo, pMat);
         scene.add(particles);
 
-        // RAYCASTER FOR COIN HOVER / CLICK
+        // RAYCASTER FOR COINS
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
         const tooltip = document.getElementById('coinTooltip');
@@ -619,7 +565,7 @@
             particles.geometry.attributes.position.needsUpdate = true;
 
             wishCoins.forEach(c => {
-                c.mesh.rotation.y += 0.01;
+                c.mesh.rotation.z += 0.005;
             });
 
             controls.update();
@@ -638,7 +584,6 @@
         function playSplashSound() {
             try {
                 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                
                 const osc1 = audioCtx.createOscillator();
                 const gain1 = audioCtx.createGain();
                 osc1.type = 'sine';
@@ -650,42 +595,15 @@
                 gain1.connect(audioCtx.destination);
                 osc1.start();
                 osc1.stop(audioCtx.currentTime + 0.4);
-
-                const bufferSize = audioCtx.sampleRate * 0.3;
-                const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-                const data = buffer.getChannelData(0);
-                for (let i = 0; i < bufferSize; i++) {
-                    data[i] = Math.random() * 2 - 1;
-                }
-                const noise = audioCtx.createBufferSource();
-                noise.buffer = buffer;
-                const filter = audioCtx.createBiquadFilter();
-                filter.type = 'bandpass';
-                filter.frequency.value = 1200;
-                const gain2 = audioCtx.createGain();
-                gain2.gain.setValueAtTime(0.2, audioCtx.currentTime + 0.05);
-                gain2.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
-                noise.connect(filter);
-                filter.connect(gain2);
-                gain2.connect(audioCtx.destination);
-                noise.start(audioCtx.currentTime + 0.05);
-            } catch(e) {
-                console.log('Audio playback waiting for interaction');
-            }
+            } catch(e) {}
         }
 
-        // --- WATER RIPPLE EFFECT ---
         function createWaterRipple(x, z) {
-            const rippleGeo = new THREE.RingGeometry(0.05, 0.15, 32);
-            const rippleMat = new THREE.MeshBasicMaterial({
-                color: 0x00f3ff,
-                side: THREE.DoubleSide,
-                transparent: true,
-                opacity: 0.9
-            });
+            const rippleGeo = new THREE.RingGeometry(0.05, 0.2, 32);
+            const rippleMat = new THREE.MeshBasicMaterial({ color: 0x00f3ff, side: THREE.DoubleSide, transparent: true, opacity: 0.9 });
             const ripple = new THREE.Mesh(rippleGeo, rippleMat);
             ripple.rotation.x = Math.PI / 2;
-            ripple.position.set(x, -0.79, z);
+            ripple.position.set(x, -0.68, z);
             scene.add(ripple);
 
             let scale = 1;
@@ -708,25 +626,24 @@
             animateRipple();
         }
 
-        // --- COIN TOSS ANIMATION ---
         function animateCoinDrop(callback) {
             const startPos = new THREE.Vector3((Math.random() - 0.5) * 4, 6, 3);
             const targetAngle = Math.random() * Math.PI * 2;
-            const targetRadius = 0.5 + Math.random() * 2.0;
+            const targetRadius = 0.6 + Math.random() * 2.0;
             const targetPos = new THREE.Vector3(
                 Math.cos(targetAngle) * targetRadius,
-                -0.8,
+                -0.68,
                 Math.sin(targetAngle) * targetRadius
             );
 
-            const tossCoinGeo = new THREE.CylinderGeometry(0.18, 0.18, 0.04, 16);
-            const tossCoinMat = new THREE.MeshStandardMaterial({ color: 0xffcc00, metalness: 0.9, roughness: 0.1 });
+            const tossCoinGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.08, 24);
+            const tossCoinMat = goldMaterial;
             const tossCoin = new THREE.Mesh(tossCoinGeo, tossCoinMat);
             tossCoin.position.copy(startPos);
             scene.add(tossCoin);
 
             let progress = 0;
-            const duration = 120;
+            const duration = 100;
 
             function updateToss() {
                 progress++;
@@ -745,9 +662,6 @@
                     requestAnimationFrame(updateToss);
                 } else {
                     scene.remove(tossCoin);
-                    tossCoin.geometry.dispose();
-                    tossCoin.material.dispose();
-                    
                     playSplashSound();
                     createWaterRipple(targetPos.x, targetPos.z);
                     if (callback) callback();
@@ -756,37 +670,26 @@
             updateToss();
         }
 
-        // EVENT LISTENERS UI
+        // EVENT LISTENERS
         document.getElementById('closeModalBtn').addEventListener('click', closeModal);
         document.getElementById('toggleAuthText').addEventListener('click', toggleAuthMode);
-
-        // ABOUT MODAL EVENT LISTENERS
         document.getElementById('aboutBtn').addEventListener('click', () => {
             document.getElementById('aboutModal').style.display = 'flex';
         });
-
         document.getElementById('closeAboutModalBtn').addEventListener('click', () => {
             document.getElementById('aboutModal').style.display = 'none';
         });
 
-        // CHECK FOR PAYMENT STATUS ON PAGE LOAD
         window.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('payment') === 'success') {
                 window.history.replaceState({}, document.title, window.location.pathname);
-                
                 setTimeout(() => {
-                    animateCoinDrop(() => {
-                        loadWishes();
-                    });
+                    animateCoinDrop(() => { loadWishes(); });
                 }, 500);
-            } else if (urlParams.get('payment') === 'cancel') {
-                alert('❌ Payment was cancelled.');
-                window.history.replaceState({}, document.title, window.location.pathname);
             }
         });
 
-        // AUTH & APP LOGIC
         updateAuthUI();
         loadWishes();
 
@@ -838,7 +741,6 @@
             loadWishes();
         }
 
-        // GOOGLE AUTH HANDLER
         async function handleGoogleCredentialResponse(response) {
             try {
                 const res = await fetch(`${API_URL}/auth/google`, {
@@ -857,7 +759,6 @@
                 updateAuthUI();
                 closeModal();
                 loadWishes();
-                alert(`Welcome ${currentUser.username}!`);
             } catch (err) {
                 alert(err.message);
             }
@@ -891,7 +792,6 @@
             }
         });
 
-        // WISH SUBMISSION VIA STRIPE
         document.getElementById('wishForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const text = document.getElementById('wishInput').value.trim();
@@ -924,7 +824,6 @@
             }
         });
 
-        // FETCH AND RENDER COINS IN THE FOUNTAIN
         async function loadWishes() {
             try {
                 const token = localStorage.getItem('token');
@@ -943,29 +842,29 @@
             }
         }
 
+        // RENDER LARGER & VISIBLE COINS
         function renderCoins(wishes) {
-            // Clean up existing coin meshes
             wishCoins.forEach(c => scene.remove(c.mesh));
             wishCoins = [];
             coinMeshes = [];
 
-            const coinGeo = new THREE.CylinderGeometry(0.18, 0.18, 0.04, 16);
+            // Bigger cylinder geometry for clear visibility
+            const coinGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.08, 24);
 
             wishes.forEach((wish, index) => {
                 const mat = wish.isFulfilled ? greenFulfilledMaterial : goldMaterial;
                 const coinMesh = new THREE.Mesh(coinGeo, mat);
 
-                // Deterministic pseudo-random positions based on wish ID/index on the pool base
-                const angle = (index * 2.4) % (Math.PI * 2);
-                const radius = 0.5 + ((index * 0.3) % 2.3);
+                const angle = (index * 2.39) % (Math.PI * 2);
+                const radius = 0.6 + ((index * 0.45) % 2.2);
 
                 coinMesh.position.set(
                     Math.cos(angle) * radius,
-                    -0.78 + (Math.random() * 0.02), // Just above pool bottom
+                    -0.68 + (Math.random() * 0.02),
                     Math.sin(angle) * radius
                 );
 
-                coinMesh.rotation.x = Math.PI / 2;
+                coinMesh.rotation.x = Math.PI / 2 + (Math.random() * 0.2 - 0.1);
                 coinMesh.rotation.z = Math.random() * Math.PI;
 
                 scene.add(coinMesh);
