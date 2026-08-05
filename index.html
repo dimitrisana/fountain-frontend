@@ -25,7 +25,7 @@
 
         // Πραγματικές ρυθμίσεις Firebase Project
         const firebaseConfig = {
-            apiKey: "AIzaSy...", // Βάλε εδώ το API Key από το Firebase Console (Project Settings -> General)
+            apiKey: "AIzaSy...", // Βάλε εδώ το δικό σου API Key από το Firebase Console (Project Settings -> General)
             authDomain: "fountain-f98d3.firebaseapp.com",
             projectId: "fountain-f98d3",
             storageBucket: "fountain-f98d3.appspot.com",
@@ -76,7 +76,7 @@
         .btn-submit-modal { width: 100%; padding: 10px; background: linear-gradient(90deg, #00f3ff, #0077ff); border: none; border-radius: 8px; color: #fff; font-weight: bold; cursor: pointer; margin-top: 8px; }
         .btn-google { width: 100%; padding: 10px; background: #4285f4; border: none; border-radius: 8px; color: #fff; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 10px; }
         .toggle-auth { color: #00f3ff; font-size: 0.8rem; cursor: pointer; margin-top: 10px; display: inline-block; text-decoration: underline; }
-        .error-msg { color: #ff4757; font-size: 0.75rem; margin-top: 5px; display: none; text-align: left; }
+        .error-msg { color: #ff4757; font-size: 0.75rem; margin-top: 8px; display: none; text-align: center; word-break: break-word; }
         .divider { display: flex; align-items: center; margin: 15px 0; color: #6a7b95; font-size: 0.75rem; }
         .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: rgba(0, 243, 255, 0.2); }
         .divider span { padding: 0 8px; }
@@ -121,7 +121,7 @@
                 <div class="form-group">
                     <label>Κωδικός</label>
                     <input type="password" id="authPassword" placeholder="******" required>
-                    <div class="error-msg" id="passwordError">Ο κωδικός πρέπει να έχει τουλάχιστον 7 χαρακτήρες και 1 κεφαλαίο γράμμα.</div>
+                    <div class="error-msg" id="passwordError" style="text-align: left;">Ο κωδικός πρέπει να έχει τουλάχιστον 7 χαρακτήρες και 1 κεφαλαίο γράμμα.</div>
                 </div>
                 <button type="submit" class="btn-submit-modal" id="authSubmitBtn">Σύνδεση</button>
             </form>
@@ -131,7 +131,7 @@
             <div class="divider"><span>Ή</span></div>
 
             <button class="btn-google" id="googleLoginBtn">Sign in with Google</button>
-            <div class="error-msg" id="authGeneralError" style="text-align: center; margin-top: 8px;"></div>
+            <div class="error-msg" id="authGeneralError"></div>
         </div>
     </div>
 
@@ -290,6 +290,9 @@
             // Έλεγχος επιστροφής από Google Redirect Login
             getRedirectResult(auth).catch((err) => {
                 console.error("Redirect Result Error:", err);
+                const genErr = document.getElementById('authGeneralError');
+                genErr.innerText = `Error (${err.code}): ${err.message}`;
+                genErr.style.display = 'block';
             });
 
             onAuthStateChanged(auth, (user) => {
@@ -343,7 +346,7 @@
                         await createUserWithEmailAndPassword(auth, email, password);
                         document.getElementById('authModal').style.display = 'none';
                     } catch (err) {
-                        genErr.innerText = err.message;
+                        genErr.innerText = `Error (${err.code}): ${err.message}`;
                         genErr.style.display = 'block';
                     }
                 } else {
@@ -357,6 +360,7 @@
                 }
             };
 
+            // Διορθωμένο Google Sign-In με ακριβή καταγραφή σφάλματος
             document.getElementById('googleLoginBtn').onclick = async () => {
                 const genErr = document.getElementById('authGeneralError');
                 genErr.style.display = 'none';
@@ -364,7 +368,7 @@
                     await signInWithRedirect(auth, provider);
                 } catch (err) {
                     console.error("Google Auth Error:", err);
-                    genErr.innerText = "Σφάλμα Google Sign-In. Βεβαιωθείτε ότι το domain είναι στα Authorized domains.";
+                    genErr.innerText = `Error (${err.code}): ${err.message}`;
                     genErr.style.display = 'block';
                 }
             };
