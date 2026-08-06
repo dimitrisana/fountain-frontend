@@ -19,11 +19,10 @@
         import { 
             getAuth, GoogleAuthProvider, signInWithPopup, 
             createUserWithEmailAndPassword, signInWithEmailAndPassword, 
-            signOut, onAuthStateChanged 
+            signOut, onAuthStateChanged, updateProfile 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // Πραγματικές ρυθμίσεις Firebase Project
         const firebaseConfig = {
             apiKey: "AIzaSyByNdHJTyLlgtrJ3flqeAG_OK6HGpbjtQ",
             authDomain: "fountain-f98d3.firebaseapp.com",
@@ -42,7 +41,7 @@
         window.firebaseApp = { 
             auth, db, provider, signInWithPopup, 
             createUserWithEmailAndPassword, signInWithEmailAndPassword, 
-            signOut, onAuthStateChanged, collection, addDoc, onSnapshot, serverTimestamp 
+            signOut, onAuthStateChanged, updateProfile, collection, addDoc, onSnapshot, serverTimestamp 
         };
     </script>
 
@@ -58,24 +57,28 @@
         .btn-neon { background: rgba(15, 12, 5, 0.8); border: 1px solid #ffaa00; color: #ffaa00; padding: 8px 18px; border-radius: 20px; font-weight: 600; cursor: pointer; transition: 0.3s; box-shadow: 0 0 10px rgba(255, 170, 0, 0.2); backdrop-filter: blur(8px); }
         .btn-neon:hover { background: #ffaa00; color: #000; box-shadow: 0 0 20px rgba(255, 170, 0, 0.6); }
 
-        .prompt-title { position: absolute; top: 10%; left: 50%; transform: translateX(-50%); z-index: 10; background: rgba(10, 15, 25, 0.6); border: 1px solid rgba(0, 243, 255, 0.2); padding: 8px 22px; border-radius: 25px; color: #8fa0be; font-style: italic; letter-spacing: 1px; backdrop-filter: blur(5px); pointer-events: none; font-size: 0.95rem; }
+        .prompt-title { position: absolute; top: 10%; left: 50%; transform: translateX(-50%); z-index: 10; background: rgba(10, 15, 25, 0.6); border: 1px solid rgba(0, 243, 255, 0.2); padding: 8px 22px; border-radius: 25px; color: #8fa0be; font-style: italic; letter-spacing: 1px; backdrop-filter: blur(5px); pointer-events: none; font-size: 0.95rem; text-align: center; }
 
         .bottom-bar { position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%); width: 92%; max-width: 550px; background: rgba(8, 12, 20, 0.85); border: 1px solid rgba(0, 243, 255, 0.5); box-shadow: 0 0 25px rgba(0, 243, 255, 0.3); border-radius: 30px; padding: 6px 8px; display: flex; align-items: center; gap: 8px; backdrop-filter: blur(10px); z-index: 10; }
         .bottom-bar input[type="text"] { flex: 1; min-width: 0; background: transparent; border: none; padding: 8px 12px; color: #fff; font-size: 0.95rem; outline: none; }
         .checkbox-container { display: flex; align-items: center; gap: 4px; font-size: 0.8rem; color: #00f3ff; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
         .btn-throw { background: linear-gradient(90deg, #ff9900, #ffbb00); border: none; color: #000; font-weight: bold; padding: 10px 18px; border-radius: 22px; cursor: pointer; box-shadow: 0 0 15px rgba(255, 153, 0, 0.5); transition: 0.3s; white-space: nowrap; flex-shrink: 0; font-size: 0.9rem; }
+        .btn-throw:hover { transform: scale(1.03); box-shadow: 0 0 25px rgba(255, 153, 0, 0.8); }
 
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); justify-content: center; align-items: center; z-index: 100; }
         .modal-content { background: #0d1322; border: 1px solid rgba(0, 243, 255, 0.3); box-shadow: 0 0 30px rgba(0, 243, 255, 0.2); padding: 30px; border-radius: 16px; width: 90%; max-width: 450px; position: relative; text-align: center; }
-        .close-btn { position: absolute; top: 12px; right: 18px; color: #aaa; font-size: 1.5rem; cursor: pointer; }
+        .close-btn { position: absolute; top: 12px; right: 18px; color: #aaa; font-size: 1.5rem; cursor: pointer; transition: 0.2s; }
+        .close-btn:hover { color: #fff; }
 
         .form-group { margin-bottom: 12px; text-align: left; }
         .form-group label { display: block; margin-bottom: 4px; font-size: 0.8rem; color: #8fa0be; }
         .form-group input { width: 100%; padding: 10px; background: #050811; border: 1px solid rgba(0, 243, 255, 0.2); border-radius: 8px; color: #fff; outline: none; font-size: 0.9rem; }
         .form-group input:focus { border-color: #00f3ff; }
 
-        .btn-submit-modal { width: 100%; padding: 10px; background: linear-gradient(90deg, #00f3ff, #0077ff); border: none; border-radius: 8px; color: #fff; font-weight: bold; cursor: pointer; margin-top: 8px; }
+        .btn-submit-modal { width: 100%; padding: 10px; background: linear-gradient(90deg, #00f3ff, #0077ff); border: none; border-radius: 8px; color: #fff; font-weight: bold; cursor: pointer; margin-top: 8px; transition: 0.3s; }
+        .btn-submit-modal:hover { opacity: 0.9; }
         .btn-google { width: 100%; padding: 10px; background: #4285f4; border: none; border-radius: 8px; color: #fff; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 10px; }
+        .btn-google:hover { background: #357ae8; }
         .toggle-auth { color: #00f3ff; font-size: 0.8rem; cursor: pointer; margin-top: 10px; display: inline-block; text-decoration: underline; }
         .error-msg { color: #ff4757; font-size: 0.8rem; margin-top: 8px; display: none; text-align: center; word-break: break-word; }
         .divider { display: flex; align-items: center; margin: 15px 0; color: #6a7b95; font-size: 0.75rem; }
@@ -306,7 +309,7 @@
             const { 
                 auth, db, provider, signInWithPopup, 
                 createUserWithEmailAndPassword, signInWithEmailAndPassword, 
-                signOut, onAuthStateChanged, collection, addDoc, onSnapshot, serverTimestamp 
+                signOut, onAuthStateChanged, updateProfile, collection, addDoc, onSnapshot, serverTimestamp 
             } = window.firebaseApp;
 
             let currentUser = null;
@@ -329,6 +332,9 @@
 
             toggleBtn.onclick = () => {
                 isSignUpMode = !isSignUpMode;
+                document.getElementById('passwordError').style.display = 'none';
+                document.getElementById('authGeneralError').style.display = 'none';
+                
                 if (isSignUpMode) {
                     modalTitle.innerText = "Εγγραφή";
                     authSubmitBtn.innerText = "Δημιουργία Λογαριασμού";
@@ -346,6 +352,7 @@
                 e.preventDefault();
                 const email = document.getElementById('authEmail').value;
                 const password = document.getElementById('authPassword').value;
+                const name = document.getElementById('authName').value;
                 const passErr = document.getElementById('passwordError');
                 const genErr = document.getElementById('authGeneralError');
                 
@@ -360,9 +367,12 @@
                         return;
                     }
                     try {
-                        await createUserWithEmailAndPassword(auth, email, password);
+                        const userCred = await createUserWithEmailAndPassword(auth, email, password);
+                        if (name.trim()) {
+                            await updateProfile(userCred.user, { displayName: name });
+                        }
                     } catch (err) {
-                        genErr.innerText = `Error: ${err.message}`;
+                        genErr.innerText = `Σφάλμα: ${err.message}`;
                         genErr.style.display = 'block';
                     }
                 } else {
@@ -384,8 +394,7 @@
                     await signInWithPopup(auth, provider);
                 } catch (err) {
                     console.error("Google Auth Error:", err);
-                    const errorMsg = `Σφάλμα (${err.code}): ${err.message}`;
-                    genErr.innerText = errorMsg;
+                    genErr.innerText = `Σφάλμα (${err.code}): ${err.message}`;
                     genErr.style.display = 'block';
                 }
             };
@@ -393,15 +402,19 @@
             // Συγχρονισμός νομισμάτων με Firebase
             onSnapshot(collection(db, "wishes"), (snapshot) => {
                 document.getElementById('wishesCountBadge').innerText = `✨ Wishes: ${snapshot.size}`;
-                while(coinsGroup.children.length > 0){ coinsGroup.remove(coinsGroup.children[0]); }
+                
+                while(coinsGroup.children.length > 0){ 
+                    coinsGroup.remove(coinsGroup.children[0]); 
+                }
                 
                 if (snapshot.size === 0) {
-                    for(let i=0; i<5; i++) addCoinToFountain();
+                    for(let i = 0; i < 5; i++) addCoinToFountain();
                 } else {
                     snapshot.forEach(() => addCoinToFountain());
                 }
             });
 
+            // Υποβολή ευχής
             document.getElementById('wishForm').onsubmit = async (e) => {
                 e.preventDefault();
                 const input = document.getElementById('wishInput');
@@ -427,7 +440,9 @@
 
         document.getElementById('authBtn').onclick = () => {
             if (window.firebaseApp && window.firebaseApp.auth.currentUser) {
-                if (confirm("Θέλετε να αποσυνδεθείτε;")) window.firebaseApp.signOut(window.firebaseApp.auth);
+                if (confirm("Θέλετε να αποσυνδεθείτε;")) {
+                    window.firebaseApp.signOut(window.firebaseApp.auth);
+                }
             } else {
                 authModal.style.display = 'flex';
             }
@@ -436,6 +451,12 @@
         document.getElementById('aboutBtn').onclick = () => aboutModal.style.display = 'flex';
         document.getElementById('closeAuthModal').onclick = () => authModal.style.display = 'none';
         document.getElementById('closeAboutModal').onclick = () => aboutModal.style.display = 'none';
+
+        // Κλείσιμο modal όταν ο χρήστης κάνει κλικ έξω από το πλαίσιο
+        window.onclick = (e) => {
+            if (e.target === authModal) authModal.style.display = 'none';
+            if (e.target === aboutModal) aboutModal.style.display = 'none';
+        };
     </script>
 </body>
 </html>
