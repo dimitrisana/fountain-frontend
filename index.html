@@ -29,7 +29,7 @@
             projectId: "fountain-f98d3",
             storageBucket: "fountain-f98d3.firebasestorage.app",
             messagingSenderId: "840291797731",
-            appId: "1:840291797731:web:76b44778a6ef/24f0253d6",
+            appId: "1:840291797731:web:76b44778a6ef724f0253d6",
             measurementId: "G-EMEZVLP8EK"
         };
 
@@ -385,7 +385,7 @@
                 }
             };
 
-            // Google Sign-In με Popup
+            // Google Sign-In
             document.getElementById('googleLoginBtn').onclick = async () => {
                 const genErr = document.getElementById('authGeneralError');
                 genErr.style.display = 'none';
@@ -452,7 +452,6 @@
         document.getElementById('closeAuthModal').onclick = () => authModal.style.display = 'none';
         document.getElementById('closeAboutModal').onclick = () => aboutModal.style.display = 'none';
 
-        // Κλείσιμο modal όταν ο χρήστης κάνει κλικ έξω από το πλαίσιο
         window.onclick = (e) => {
             if (e.target === authModal) authModal.style.display = 'none';
             if (e.target === aboutModal) aboutModal.style.display = 'none';
