@@ -13,335 +13,585 @@
     <!-- Stripe SDK -->
     <script src="https://js.stripe.com/v3/"></script>
 
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { 
+            getAuth, GoogleAuthProvider, signInWithPopup, 
+            createUserWithEmailAndPassword, signInWithEmailAndPassword, 
+            signOut, onAuthStateChanged, updateProfile 
+        } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, where, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCj8_9xnUDIJJlduH_T3JRJ0hwoXcxrR7k",
+            authDomain: "fountain-f98d3.firebaseapp.com",
+            projectId: "fountain-f98d3",
+            storageBucket: "fountain-f98d3.appspot.com",
+            messagingSenderId: "1055746211831",
+            appId: "1:1055746211831:web:5d2b7c6c4c5e3d23",
+            measurementId: "G-EMEZVLP8EK"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const provider = new GoogleAuthProvider();
+
+        window.firebaseApp = { 
+            auth, db, provider, signInWithPopup, 
+            createUserWithEmailAndPassword, signInWithEmailAndPassword, 
+            signOut, onAuthStateChanged, updateProfile, collection, addDoc, onSnapshot, query, where, doc, updateDoc
+        };
+    </script>
+
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; }
-        body { background: #0f172a; color: #fff; overflow-x: hidden; }
-        #canvas-container { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; }
-        
-        .ui-overlay { position: relative; z-index: 10; pointer-events: none; padding: 20px; }
-        .interactive { pointer-events: auto; }
-        
-        header { display: flex; justify: space-between; align-items: center; max-width: 1200px; margin: 0 auto 20px auto; }
-        h1 { font-size: 1.8rem; text-shadow: 0 0 10px rgba(255,255,255,0.5); }
-        
-        .btn { padding: 10px 20px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; transition: 0.3s; }
-        .btn-primary { background: linear-gradient(45deg, #3b82f6, #8b5cf6); color: white; }
-        .btn-success { background: #22c55e; color: white; }
-        .btn-danger { background: #ef4444; color: white; }
-        .btn:hover { opacity: 0.9; transform: translateY(-2px); }
-        
-        .card { background: rgba(30, 41, 59, 0.85); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 20px; max-width: 500px; margin: 0 auto 30px auto; }
-        textarea, input[type="text"], input[type="password"] { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; margin-bottom: 12px; }
-        
-        .tabs { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; }
-        .tab-btn { background: #1e293b; color: #94a3b8; padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; }
-        .tab-btn.active { background: #3b82f6; color: white; }
+        body { background-color: #050508; color: #fff; overflow: hidden; height: 100vh; width: 100vw; }
+        #canvas-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
 
-        .wishes-list { max-width: 600px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px; }
-        .wish-item { background: rgba(30, 41, 59, 0.7); padding: 15px; border-radius: 8px; border-left: 4px solid #3b82f6; }
+        .top-bar { position: absolute; top: 20px; width: 100%; padding: 0 30px; display: flex; justify-content: space-between; align-items: center; z-index: 10; }
+        .badge { background: rgba(10, 15, 25, 0.7); border: 1px solid rgba(0, 243, 255, 0.4); box-shadow: 0 0 15px rgba(0, 243, 255, 0.2); padding: 8px 18px; border-radius: 20px; font-size: 0.95rem; color: #ffcc00; font-weight: 600; backdrop-filter: blur(8px); }
+        .top-right-controls { display: flex; gap: 12px; }
+
+        .btn-neon { background: rgba(15, 12, 5, 0.8); border: 1px solid #ffaa00; color: #ffaa00; padding: 8px 18px; border-radius: 20px; font-weight: 600; cursor: pointer; transition: 0.3s; box-shadow: 0 0 10px rgba(255, 170, 0, 0.2); backdrop-filter: blur(8px); }
+        .btn-neon:hover { background: #ffaa00; color: #000; box-shadow: 0 0 20px rgba(255, 170, 0, 0.6); }
+
+        .prompt-title { position: absolute; top: 10%; left: 50%; transform: translateX(-50%); z-index: 10; background: rgba(10, 15, 25, 0.6); border: 1px solid rgba(0, 243, 255, 0.2); padding: 8px 22px; border-radius: 25px; color: #8fa0be; font-style: italic; letter-spacing: 1px; backdrop-filter: blur(5px); pointer-events: none; font-size: 0.95rem; text-align: center; }
+
+        /* Container για τη φόρμα και τις ευχές */
+        .bottom-container { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); width: 92%; max-width: 550px; z-index: 10; display: flex; flex-direction: column; gap: 10px; }
         
-        .modal-bg { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.7); z-index: 100; display: none; justify-content: center; align-items: center; pointer-events: auto; }
-        .modal { background: #1e293b; padding: 30px; border-radius: 12px; width: 90%; max-width: 400px; }
+        .bottom-bar { background: rgba(8, 12, 20, 0.85); border: 1px solid rgba(0, 243, 255, 0.5); box-shadow: 0 0 25px rgba(0, 243, 255, 0.3); border-radius: 30px; padding: 6px 8px; display: flex; align-items: center; gap: 8px; backdrop-filter: blur(10px); }
+        .bottom-bar input[type="text"] { flex: 1; min-width: 0; background: transparent; border: none; padding: 8px 12px; color: #fff; font-size: 0.95rem; outline: none; }
+        .checkbox-container { display: flex; align-items: center; gap: 4px; font-size: 0.8rem; color: #00f3ff; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
+        
+        .btn-throw { background: linear-gradient(90deg, #ff9900, #ffbb00); border: none; color: #000; font-weight: bold; padding: 10px 18px; border-radius: 22px; cursor: pointer; box-shadow: 0 0 15px rgba(255, 153, 0, 0.5); transition: 0.3s; white-space: nowrap; flex-shrink: 0; font-size: 0.9rem; }
+        .btn-throw:hover { transform: scale(1.03); box-shadow: 0 0 25px rgba(255, 153, 0, 0.8); }
+
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); justify-content: center; align-items: center; z-index: 100; }
+        .modal-content { background: #0d1322; border: 1px solid rgba(0, 243, 255, 0.3); box-shadow: 0 0 30px rgba(0, 243, 255, 0.2); padding: 30px; border-radius: 16px; width: 90%; max-width: 450px; position: relative; text-align: center; }
+        .close-btn { position: absolute; top: 12px; right: 18px; color: #aaa; font-size: 1.5rem; cursor: pointer; transition: 0.2s; }
+        .close-btn:hover { color: #fff; }
+
+        .form-group { margin-bottom: 12px; text-align: left; }
+        .form-group label { display: block; margin-bottom: 4px; font-size: 0.8rem; color: #8fa0be; }
+        .form-group input, .form-group textarea { width: 100%; padding: 10px; background: #050811; border: 1px solid rgba(0, 243, 255, 0.2); border-radius: 8px; color: #fff; outline: none; font-size: 0.9rem; }
+        .form-group input:focus, .form-group textarea:focus { border-color: #00f3ff; }
+
+        .btn-submit-modal { width: 100%; padding: 10px; background: linear-gradient(90deg, #00f3ff, #0077ff); border: none; border-radius: 8px; color: #fff; font-weight: bold; cursor: pointer; margin-top: 8px; transition: 0.3s; }
+        .btn-submit-modal:hover { opacity: 0.9; }
+        .btn-google { width: 100%; padding: 10px; background: #4285f4; border: none; border-radius: 8px; color: #fff; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 10px; }
+        .btn-google:hover { background: #357ae8; }
+        .toggle-auth { color: #00f3ff; font-size: 0.8rem; cursor: pointer; margin-top: 10px; display: inline-block; text-decoration: underline; }
+        .error-msg { color: #ff4757; font-size: 0.8rem; margin-top: 8px; display: none; text-align: center; word-break: break-word; }
+        .divider { display: flex; align-items: center; margin: 15px 0; color: #6a7b95; font-size: 0.75rem; }
+        .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: rgba(0, 243, 255, 0.2); }
+        .divider span { padding: 0 8px; }
+
+        .about-text { text-align: left; color: #a0aec0; font-size: 0.9rem; line-height: 1.6; margin-top: 10px; }
+        .about-text strong { color: #00f3ff; }
+
+        /* Λίστα Ευχών Χρήστη */
+        .my-wishes-list { max-height: 200px; overflow-y: auto; text-align: left; margin-top: 15px; }
+        .my-wish-card { background: rgba(5, 8, 17, 0.8); border: 1px solid rgba(0, 243, 255, 0.2); border-radius: 8px; padding: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .my-wish-card p { font-size: 0.85rem; color: #fff; margin-bottom: 2px; }
+        .my-wish-card span { font-size: 0.75rem; color: #8fa0be; }
+        .btn-edit { background: #ffaa00; border: none; color: #000; padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
 
     <div id="canvas-container"></div>
 
-    <div class="ui-overlay">
-        <header class="interactive">
-            <h1>✨ Wish Fountain</h1>
-            <div id="user-controls">
-                <button class="btn btn-primary" onclick="openModal('auth-modal')">Σύνδεση / Εγγραφή</button>
+    <div class="top-bar">
+        <div class="badge" id="wishesCountBadge">✨ Wishes: 0</div>
+        <div class="top-right-controls">
+            <button class="btn-neon" id="myWishesBtn" style="display: none;">📜 Οι Ευχές Μου</button>
+            <button class="btn-neon" id="aboutBtn">✨ About</button>
+            <button class="btn-neon" id="authBtn">🔑 Login / Sign Up</button>
+        </div>
+    </div>
+
+    <div class="prompt-title">Make your wish come true... ✨</div>
+
+    <div class="bottom-container">
+        <form class="bottom-bar" id="wishForm">
+            <input type="text" id="wishInput" placeholder="Make a wish..." required autocomplete="off">
+            <label class="checkbox-container">
+                <input type="checkbox" id="publicCheck" checked> Public
+            </label>
+            <button type="submit" class="btn-throw" id="submitWishBtn">Throw (1€)</button>
+        </form>
+    </div>
+
+    <!-- Modal Σύνδεσης -->
+    <div class="modal" id="authModal">
+        <div class="modal-content">
+            <span class="close-btn" id="closeAuthModal">&times;</span>
+            <h2 style="margin-bottom: 15px; color: #00f3ff;" id="modalTitle">Σύνδεση</h2>
+            
+            <form id="emailAuthForm">
+                <div class="form-group" id="nameGroup" style="display: none;">
+                    <label>Όνομα</label>
+                    <input type="text" id="authName" placeholder="Το όνομά σας">
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="authEmail" placeholder="email@example.com" required>
+                </div>
+                <div class="form-group">
+                    <label>Κωδικός</label>
+                    <input type="password" id="authPassword" placeholder="******" required>
+                    <div class="error-msg" id="passwordError" style="text-align: left;">Ο κωδικός πρέπει να έχει τουλάχιστον 7 χαρακτήρες και 1 κεφαλαίο γράμμα.</div>
+                </div>
+                <button type="submit" class="btn-submit-modal" id="authSubmitBtn">Σύνδεση</button>
+            </form>
+
+            <span class="toggle-auth" id="toggleAuthMode">Δεν έχετε λογαριασμό; Εγγραφή</span>
+
+            <div class="divider"><span>Ή</span></div>
+
+            <button class="btn-google" id="googleLoginBtn">Sign in with Google</button>
+            <div class="error-msg" id="authGeneralError"></div>
+        </div>
+    </div>
+
+    <!-- Modal Οι Ευχές Μου -->
+    <div class="modal" id="myWishesModal">
+        <div class="modal-content">
+            <span class="close-btn" id="closeMyWishesModal">&times;</span>
+            <h2 style="margin-bottom: 15px; color: #00f3ff;">📜 Οι Ευχές Μου</h2>
+            <div class="my-wishes-list" id="myWishesList">
+                <p style="color: #8fa0be;">Φόρτωση...</p>
             </div>
-        </header>
-
-        <!-- Φόρμα Ευχής -->
-        <div class="card interactive">
-            <h2 style="margin-bottom: 15px; font-size: 1.2rem;">Ρίξε ένα νόμισμα & Κάνε μια ευχή 🪙</h2>
-            <form id="wish-form">
-                <textarea id="wish-text" placeholder="Πρέπει να συνδεθείτε για να κάνετε ευχή..." rows="3" required disabled></textarea>
-                <div style="margin-bottom: 15px;">
-                    <label style="cursor: pointer;">
-                        <input type="checkbox" id="wish-public" checked disabled> Δημόσια ευχή
-                    </label>
-                </div>
-                <button type="submit" id="submit-wish-btn" class="btn btn-primary" style="width: 100%;" disabled>Σύνδεση για Ευχή</button>
-            </form>
-        </div>
-
-        <!-- Tabs Navigation -->
-        <div class="tabs interactive">
-            <button class="tab-btn active" id="tab-all" onclick="switchTab('all')">Όλες οι Ευχές</button>
-            <button class="tab-btn" id="tab-my" onclick="switchTab('my')" style="display: none;">Οι Ευχές Μου</button>
-        </div>
-
-        <!-- Λίστα Ευχών -->
-        <div class="wishes-list interactive" id="wishes-container"></div>
-    </div>
-
-    <!-- Modal Auth -->
-    <div class="modal-bg" id="auth-modal">
-        <div class="modal">
-            <h2 id="auth-title" style="margin-bottom: 15px;">Σύνδεση</h2>
-            <p id="auth-error" style="color: #ef4444; font-size: 0.9rem; margin-bottom: 10px; display: none;"></p>
-            <form id="auth-form">
-                <input type="text" id="auth-username" placeholder="Όνομα χρήστη" required>
-                <input type="password" id="auth-password" placeholder="Κωδικός πρόσβασης" required>
-                <button type="submit" class="btn btn-primary" style="width: 100%; margin-bottom: 10px;">Είσοδος</button>
-            </form>
-            <button class="btn" style="background: transparent; color: #94a3b8; width: 100%;" onclick="toggleAuthMode()">Δεν έχετε λογαριασμό; Εγγραφείτε</button>
-            <button class="btn btn-danger" style="width: 100%; margin-top: 10px;" onclick="closeModal('auth-modal')">Ακύρωση</button>
         </div>
     </div>
 
-    <!-- Modal Edit Wish -->
-    <div class="modal-bg" id="edit-modal">
-        <div class="modal">
-            <h2 style="margin-bottom: 15px;">Επεξεργασία Ευχής</h2>
-            <form id="edit-form">
-                <input type="hidden" id="edit-wish-id">
-                <textarea id="edit-wish-text" rows="3" required></textarea>
-                <div style="margin-bottom: 15px;">
-                    <label style="cursor: pointer;">
-                        <input type="checkbox" id="edit-wish-public"> Δημόσια ευχή
-                    </label>
+    <!-- Modal Επεξεργασίας Ευχής -->
+    <div class="modal" id="editWishModal">
+        <div class="modal-content">
+            <span class="close-btn" id="closeEditWishModal">&times;</span>
+            <h2 style="margin-bottom: 15px; color: #ffaa00;">✏️ Επεξεργασία Ευχής</h2>
+            <form id="editWishForm">
+                <input type="hidden" id="editWishId">
+                <div class="form-group">
+                    <label>Κείμενο Ευχής</label>
+                    <textarea id="editWishText" rows="3" required></textarea>
                 </div>
-                <button type="submit" class="btn btn-success" style="width: 100%; margin-bottom: 10px;">Αποθήκευση</button>
-                <button type="button" class="btn btn-danger" style="width: 100%;" onclick="closeModal('edit-modal')">Ακύρωση</button>
+                <div class="form-group" style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="editWishPublic" style="width: auto;">
+                    <label for="editWishPublic" style="margin: 0; color: #00f3ff;">Δημόσια Ευχή</label>
+                </div>
+                <button type="submit" class="btn-submit-modal" style="background: linear-gradient(90deg, #ff9900, #ffbb00); color: #000;">Αποθήκευση</button>
             </form>
+        </div>
+    </div>
+
+    <!-- Modal About -->
+    <div class="modal" id="aboutModal">
+        <div class="modal-content">
+            <span class="close-btn" id="closeAboutModal">&times;</span>
+            <h2 style="margin-bottom: 15px; color: #ffaa00;">✨ Wish Fountain</h2>
+            <div class="about-text">
+                <p style="margin-bottom: 12px;">
+                    Καλώς ήρθατε στο <strong>Wish Fountain</strong>, ένα ψηφιακό σιντριβάνι ευχών όπου η ενέργεια των ανθρώπων από όλο τον κόσμο συναντιέται.
+                </p>
+                <p style="margin-bottom: 12px;">
+                    🎯 <strong>Πώς λειτουργεί;</strong><br>
+                    Κάθε φορά που ρίχνετε ένα νόμισμα (1€), η ευχή σας καταγράφεται για πάντα στο σιντριβάνι.
+                </p>
+                <p>
+                    🌟 <strong>Public ή Private:</strong><br>
+                    Επιλέξτε αν θέλετε η ευχή σας να εμφανίζεται δημόσια στην κοινότητα ή να παραμείνει η δική σας κρυφή ελπίδα.
+                </p>
+            </div>
         </div>
     </div>
 
     <script>
-        const API_BASE_URL = 'https://fountain-backend-k864.onrender.com';
-        const stripe = Stripe('pk_test_51RoF1fJiXuGDcV5COMHcZGoKAVl1sAGmnbOr4QjZeAmGE34h40jgZuiCHdfmh7RACRYBRA2XjgWwwQH7TkshuUR001cdXMc90');
+        // --- STRIPE INITIALIZATION ---
+        const stripe = Stripe('pk_test_51RoFlfJiXuGDcV5C0BSXrR7w1WzhAFqACtEH0PmlO4YsBAo5yfAqrmEegNNirCBTlfqLM71UFDoKzQOR0Wnzi43o00ZIiRMyMN');
+        const BACKEND_URL = 'https://fountain-backend-mgxf.onrender.com';
 
-        let token = localStorage.getItem('token') || '';
-        let user = JSON.parse(localStorage.getItem('user') || 'null');
-        let currentTab = 'all';
-        let isLoginView = true;
-
-        // UI Initialization
-        function updateUI() {
-            const userControls = document.getElementById('user-controls');
-            const wishText = document.getElementById('wish-text');
-            const wishPublic = document.getElementById('wish-public');
-            const submitBtn = document.getElementById('submit-wish-btn');
-            const tabMy = document.getElementById('tab-my');
-
-            if (user && token) {
-                userControls.innerHTML = `<span>Καλώς ήρθες, <strong>${user.username}</strong></span> <button class="btn btn-danger" onclick="logout()" style="margin-left: 10px; padding: 5px 10px;">Έξοδος</button>`;
-                wishText.disabled = false;
-                wishText.placeholder = "Γράψε την ευχή σου...";
-                wishPublic.disabled = false;
-                submitBtn.disabled = false;
-                submitBtn.innerText = "Πληρωμή (1.00 €) & Δημοσίευση";
-                tabMy.style.display = 'inline-block';
-            } else {
-                userControls.innerHTML = `<button class="btn btn-primary" onclick="openModal('auth-modal')">Σύνδεση / Εγγραφή</button>`;
-                wishText.disabled = true;
-                wishText.placeholder = "Πρέπει να συνδεθείτε για να κάνετε ευχή...";
-                wishPublic.disabled = true;
-                submitBtn.disabled = false;
-                submitBtn.innerText = "Σύνδεση για Ευχή";
-                tabMy.style.display = 'none';
-                switchTab('all');
-            }
-        }
-
-        // Fetch Wishes
-        async function fetchWishes() {
-            const container = document.getElementById('wishes-container');
-            container.innerHTML = '<p>Φόρτωση ευχών...</p>';
-
-            try {
-                let url = `${API_BASE_URL}/api/wishes`;
-                let headers = {};
-
-                if (currentTab === 'my') {
-                    url = `${API_BASE_URL}/api/wishes/my-wishes`;
-                    headers['Authorization'] = `Bearer ${token}`;
-                }
-
-                const res = await fetch(url, { headers });
-                const wishes = await res.json();
-
-                container.innerHTML = '';
-                if (!Array.isArray(wishes) || wishes.length === 0) {
-                    container.innerHTML = '<p>Δεν βρέθηκαν ευχές.</p>';
-                    return;
-                }
-
-                wishes.forEach(w => {
-                    const item = document.createElement('div');
-                    item.className = 'wish-item';
-                    item.innerHTML = `
-                        <p style="font-weight: 600;">"${w.text}"</p>
-                        <small style="color: #94a3b8;">Από: ${w.author} | ${new Date(w.createdAt).toLocaleDateString()}</small>
-                        ${currentTab === 'my' ? `<br><button class="btn btn-primary" style="padding: 4px 8px; font-size: 0.8rem; margin-top: 8px;" onclick="openEditModal('${w._id}', '${w.text.replace(/'/g, "\\'")}', ${w.isPublic})">Επεξεργασία</button>` : ''}
-                    `;
-                    container.appendChild(item);
-                });
-            } catch (err) {
-                container.innerHTML = '<p>Σφάλμα φόρτωσης ευχών.</p>';
-            }
-        }
-
-        function switchTab(tab) {
-            currentTab = tab;
-            document.getElementById('tab-all').classList.toggle('active', tab === 'all');
-            document.getElementById('tab-my').classList.toggle('active', tab === 'my');
-            fetchWishes();
-        }
-
-        // Wish Submission
-        document.getElementById('wish-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            if (!user || !token) {
-                openModal('auth-modal');
-                return;
-            }
-
-            const wishText = document.getElementById('wish-text').value;
-            const isPublic = document.getElementById('wish-public').checked;
-
-            try {
-                const res = await fetch(`${API_BASE_URL}/api/create-checkout-session`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({ wishText, isPublic })
-                });
-
-                const data = await res.json();
-                if (data.id) {
-                    await stripe.redirectToCheckout({ sessionId: data.id });
-                } else {
-                    alert(data.message || 'Σφάλμα πληρωμής.');
-                }
-            } catch (err) {
-                alert('Σφάλμα σύνδεσης.');
-            }
-        });
-
-        // Auth Logic
-        document.getElementById('auth-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const username = document.getElementById('auth-username').value;
-            const password = document.getElementById('auth-password').value;
-            const errorEl = document.getElementById('auth-error');
-            errorEl.style.display = 'none';
-
-            const endpoint = isLoginView ? '/api/auth/login' : '/api/auth/signup';
-
-            try {
-                const res = await fetch(`${API_BASE_URL}${endpoint}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
-                });
-                const data = await res.json();
-
-                if (!res.ok) {
-                    errorEl.innerText = data.message || 'Αποτυχία αυθεντικοποίησης.';
-                    errorEl.style.display = 'block';
-                    return;
-                }
-
-                token = data.token;
-                user = data.user;
-                localStorage.setItem('token', token);
-                localStorage.setItem('user', JSON.stringify(user));
-
-                closeModal('auth-modal');
-                updateUI();
-                fetchWishes();
-            } catch (err) {
-                errorEl.innerText = 'Σφάλμα διακομιστή.';
-                errorEl.style.display = 'block';
-            }
-        });
-
-        function toggleAuthMode() {
-            isLoginView = !isLoginView;
-            document.getElementById('auth-title').innerText = isLoginView ? 'Σύνδεση' : 'Εγγραφή';
-        }
-
-        function logout() {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            token = '';
-            user = null;
-            updateUI();
-            fetchWishes();
-        }
-
-        // Edit Modal Logic
-        function openEditModal(id, text, isPublic) {
-            document.getElementById('edit-wish-id').value = id;
-            document.getElementById('edit-wish-text').value = text;
-            document.getElementById('edit-wish-public').checked = isPublic;
-            openModal('edit-modal');
-        }
-
-        document.getElementById('edit-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const id = document.getElementById('edit-wish-id').value;
-            const text = document.getElementById('edit-wish-text').value;
-            const isPublic = document.getElementById('edit-wish-public').checked;
-
-            try {
-                const res = await fetch(`${API_BASE_URL}/api/wishes/${id}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({ text, isPublic })
-                });
-
-                if (res.ok) {
-                    closeModal('edit-modal');
-                    fetchWishes();
-                } else {
-                    alert('Αποτυχία ενημέρωσης.');
-                }
-            } catch (err) {
-                alert('Σφάλμα σύνδεσης.');
-            }
-        });
-
-        // Modal Controls
-        function openModal(id) { document.getElementById(id).style.display = 'flex'; }
-        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-
-        // Init Three.js Background Simulation
+        // --- THREE.JS SCENE SETUP ---
+        const container = document.getElementById('canvas-container');
         const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.getElementById('canvas-container').appendChild(renderer.domElement);
+        scene.fog = new THREE.FogExp2(0x050508, 0.03);
 
-        const geometry = new THREE.TorusGeometry(10, 3, 16, 100);
-        const material = new THREE.MeshBasicMaterial({ color: 0x3b82f6, wireframe: true });
-        const torus = new THREE.Mesh(geometry, material);
-        scene.add(torus);
-        camera.position.z = 30;
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 3.5, 5.5);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        container.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.maxPolarAngle = Math.PI / 2.1;
+
+        // Lights
+        const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
+        scene.add(ambientLight);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1.8);
+        dirLight.position.set(5, 10, 7);
+        scene.add(dirLight);
+
+        // Fountain Model
+        const fountainGroup = new THREE.Group();
+        const darkMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.3, metalness: 0.3 });
+        const waterMat = new THREE.MeshStandardMaterial({ color: 0x00f3ff, emissive: 0x0088aa, roughness: 0.1, transparent: true, opacity: 0.85 });
+
+        const base = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 3, 0.4, 32), darkMat);
+        base.position.y = -1;
+        fountainGroup.add(base);
+
+        const waterBase = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 2.4, 0.1, 32), waterMat);
+        waterBase.position.y = -0.78;
+        fountainGroup.add(waterBase);
+
+        const pedestal = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.4, 1.2, 16), darkMat);
+        pedestal.position.y = -0.2;
+        fountainGroup.add(pedestal);
+
+        const bowl = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 0.8, 0.3, 32), darkMat);
+        bowl.position.y = 0.4;
+        fountainGroup.add(bowl);
+
+        const topWater = new THREE.Mesh(new THREE.CylinderGeometry(1.15, 1.15, 0.05, 32), waterMat);
+        topWater.position.y = 0.53;
+        fountainGroup.add(topWater);
+
+        scene.add(fountainGroup);
+
+        // Particles & Animations
+        const particleCount = 200;
+        const particlesGeo = new THREE.BufferGeometry();
+        const particlePositions = new Float32Array(particleCount * 3);
+        const velocities = [];
+
+        for (let i = 0; i < particleCount; i++) {
+            particlePositions[i * 3] = 0;
+            particlePositions[i * 3 + 1] = 0.55;
+            particlePositions[i * 3 + 2] = 0;
+
+            velocities.push({
+                x: (Math.random() - 0.5) * 0.025,
+                y: Math.random() * 0.04 + 0.035,
+                z: (Math.random() - 0.5) * 0.025
+            });
+        }
+
+        particlesGeo.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+        const particleMat = new THREE.PointsMaterial({ color: 0x00ffff, size: 0.05, transparent: true, opacity: 0.9 });
+        const particleSystem = new THREE.Points(particlesGeo, particleMat);
+        fountainGroup.add(particleSystem);
+
+        const coinsGroup = new THREE.Group();
+        fountainGroup.add(coinsGroup);
+
+        const coinGeo = new THREE.CylinderGeometry(0.09, 0.09, 0.02, 16);
+        const coinMat = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.95, roughness: 0.15 });
+
+        function addCoinToFountain() {
+            const coin = new THREE.Mesh(coinGeo, coinMat);
+            const radius = Math.random() * 0.75;
+            const angle = Math.random() * Math.PI * 2;
+            
+            coin.position.set(Math.cos(angle) * radius, 0.57, Math.sin(angle) * radius);
+            coin.rotation.x = Math.PI / 2 + (Math.random() - 0.5) * 0.2;
+            coin.rotation.z = Math.random() * Math.PI;
+
+            coinsGroup.add(coin);
+        }
 
         function animate() {
             requestAnimationFrame(animate);
-            torus.rotation.x += 0.01;
-            torus.rotation.y += 0.005;
+
+            const positions = particleSystem.geometry.attributes.position.array;
+            for (let i = 0; i < particleCount; i++) {
+                positions[i * 3] += velocities[i].x;
+                positions[i * 3 + 1] += velocities[i].y;
+                positions[i * 3 + 2] += velocities[i].z;
+
+                velocities[i].y -= 0.0016;
+
+                if (positions[i * 3 + 1] < 0.52) {
+                    positions[i * 3] = 0;
+                    positions[i * 3 + 1] = 0.55;
+                    positions[i * 3 + 2] = 0;
+
+                    velocities[i].x = (Math.random() - 0.5) * 0.025;
+                    velocities[i].y = Math.random() * 0.04 + 0.035;
+                    velocities[i].z = (Math.random() - 0.5) * 0.025;
+                }
+            }
+            particleSystem.geometry.attributes.position.needsUpdate = true;
+
+            fountainGroup.rotation.y += 0.0025;
+            controls.update();
             renderer.render(scene, camera);
         }
         animate();
 
-        // Initial Load
-        updateUI();
-        fetchWishes();
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // --- AUTH & FIREBASE LOGIC ---
+        let isSignUpMode = false;
+        let currentUser = null;
+
+        window.addEventListener('load', () => {
+            const interval = setInterval(() => {
+                if (window.firebaseApp) {
+                    clearInterval(interval);
+                    initApp();
+                }
+            }, 100);
+        });
+
+        function initApp() {
+            const { 
+                auth, db, provider, signInWithPopup, 
+                createUserWithEmailAndPassword, signInWithEmailAndPassword, 
+                signOut, onAuthStateChanged, updateProfile, collection, addDoc, onSnapshot, query, where, doc, updateDoc 
+            } = window.firebaseApp;
+
+            onAuthStateChanged(auth, (user) => {
+                currentUser = user;
+                const authBtn = document.getElementById('authBtn');
+                const myWishesBtn = document.getElementById('myWishesBtn');
+
+                if (user) {
+                    authBtn.innerText = `👤 ${user.displayName || user.email.split('@')[0]}`;
+                    myWishesBtn.style.display = 'inline-block';
+                    document.getElementById('authModal').style.display = 'none';
+                } else {
+                    authBtn.innerText = '🔑 Login / Sign Up';
+                    myWishesBtn.style.display = 'none';
+                }
+            });
+
+            const toggleBtn = document.getElementById('toggleAuthMode');
+            const modalTitle = document.getElementById('modalTitle');
+            const authSubmitBtn = document.getElementById('authSubmitBtn');
+            const nameGroup = document.getElementById('nameGroup');
+
+            toggleBtn.onclick = () => {
+                isSignUpMode = !isSignUpMode;
+                document.getElementById('passwordError').style.display = 'none';
+                document.getElementById('authGeneralError').style.display = 'none';
+                
+                if (isSignUpMode) {
+                    modalTitle.innerText = "Εγγραφή";
+                    authSubmitBtn.innerText = "Δημιουργία Λογαριασμού";
+                    toggleBtn.innerText = "Έχετε ήδη λογαριασμό; Σύνδεση";
+                    nameGroup.style.display = "block";
+                } else {
+                    modalTitle.innerText = "Σύνδεση";
+                    authSubmitBtn.innerText = "Σύνδεση";
+                    toggleBtn.innerText = "Δεν έχετε λογαριασμό; Εγγραφή";
+                    nameGroup.style.display = "none";
+                }
+            };
+
+            document.getElementById('emailAuthForm').onsubmit = async (e) => {
+                e.preventDefault();
+                const email = document.getElementById('authEmail').value;
+                const password = document.getElementById('authPassword').value;
+                const name = document.getElementById('authName').value;
+                const passErr = document.getElementById('passwordError');
+                const genErr = document.getElementById('authGeneralError');
+                
+                passErr.style.display = 'none';
+                genErr.style.display = 'none';
+
+                const passRegex = /^(?=.*[A-Z]).{7,}$/;
+
+                if (isSignUpMode) {
+                    if (!passRegex.test(password)) {
+                        passErr.style.display = 'block';
+                        return;
+                    }
+                    try {
+                        const userCred = await createUserWithEmailAndPassword(auth, email, password);
+                        if (name.trim()) {
+                            await updateProfile(userCred.user, { displayName: name });
+                        }
+                    } catch (err) {
+                        genErr.innerText = `Σφάλμα: ${err.message}`;
+                        genErr.style.display = 'block';
+                    }
+                } else {
+                    try {
+                        await signInWithEmailAndPassword(auth, email, password);
+                    } catch (err) {
+                        genErr.innerText = "Λάθος στοιχεία σύνδεσης.";
+                        genErr.style.display = 'block';
+                    }
+                }
+            };
+
+            document.getElementById('googleLoginBtn').onclick = async () => {
+                const genErr = document.getElementById('authGeneralError');
+                genErr.style.display = 'none';
+                try {
+                    await signInWithPopup(auth, provider);
+                } catch (err) {
+                    genErr.innerText = `Σφάλμα (${err.code}): ${err.message}`;
+                    genErr.style.display = 'block';
+                }
+            };
+
+            // realtime update για τα νομίσματα στο σιντριβάνι
+            onSnapshot(collection(db, "wishes"), (snapshot) => {
+                document.getElementById('wishesCountBadge').innerText = `✨ Wishes: ${snapshot.size}`;
+                
+                while(coinsGroup.children.length > 0){ 
+                    coinsGroup.remove(coinsGroup.children[0]); 
+                }
+                
+                if (snapshot.size === 0) {
+                    for(let i = 0; i < 5; i++) addCoinToFountain();
+                } else {
+                    snapshot.forEach(() => addCoinToFountain());
+                }
+            });
+
+            // Φόρτωση Προσωπικών Ευχών
+            document.getElementById('myWishesBtn').onclick = () => {
+                if (!currentUser) return;
+                const list = document.getElementById('myWishesList');
+                list.innerHTML = '<p style="color: #8fa0be;">Φόρτωση...</p>';
+                document.getElementById('myWishesModal').style.display = 'flex';
+
+                const q = query(collection(db, "wishes"), where("userId", "==", currentUser.uid));
+                onSnapshot(q, (snapshot) => {
+                    list.innerHTML = '';
+                    if (snapshot.empty) {
+                        list.innerHTML = '<p style="color: #8fa0be;">Δεν έχετε κάνει ακόμα κάποια ευχή.</p>';
+                        return;
+                    }
+                    snapshot.forEach((docSnap) => {
+                        const data = docSnap.data();
+                        const card = document.createElement('div');
+                        card.className = 'my-wish-card';
+                        card.innerHTML = `
+                            <div>
+                                <p>"${data.text}"</p>
+                                <span>${data.isPublic ? '🌐 Δημόσια' : '🔒 Ιδιωτική'}</span>
+                            </div>
+                            <button class="btn-edit" onclick="openEditWish('${docSnap.id}', '${data.text.replace(/'/g, "\\'")}', ${data.isPublic})">Edit</button>
+                        `;
+                        list.appendChild(card);
+                    });
+                });
+            };
+
+            // Επεξεργασία Ευχής Submit
+            document.getElementById('editWishForm').onsubmit = async (e) => {
+                e.preventDefault();
+                const id = document.getElementById('editWishId').value;
+                const text = document.getElementById('editWishText').value.trim();
+                const isPublic = document.getElementById('editWishPublic').checked;
+
+                if (!text || !id) return;
+
+                try {
+                    await updateDoc(doc(db, "wishes", id), { text, isPublic });
+                    document.getElementById('editWishModal').style.display = 'none';
+                } catch (err) {
+                    alert("Σφάλμα ενημέρωσης ευχής.");
+                }
+            };
+
+            // Submit Ευχής (Stripe Checkout)
+            document.getElementById('wishForm').onsubmit = async (e) => {
+                e.preventDefault();
+                
+                // Έλεγχος αν ο χρήστης είναι συνδεδεμένος
+                if (!currentUser) {
+                    document.getElementById('authModal').style.display = 'flex';
+                    return;
+                }
+
+                const input = document.getElementById('wishInput');
+                const wishText = input.value.trim();
+                if (!wishText) return;
+
+                const submitBtn = document.getElementById('submitWishBtn');
+                submitBtn.disabled = true;
+                submitBtn.innerText = "Processing...";
+
+                try {
+                    const response = await fetch(`${BACKEND_URL}/api/create-checkout-session`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            wishText: wishText,
+                            isPublic: document.getElementById('publicCheck').checked,
+                            author: currentUser.displayName || currentUser.email.split('@')[0],
+                            userId: currentUser.uid
+                        })
+                    });
+
+                    const session = await response.json();
+
+                    if (session.id) {
+                        await stripe.redirectToCheckout({ sessionId: session.id });
+                    } else {
+                        alert("Σφάλμα κατά τη δημιουργία της πληρωμής.");
+                        submitBtn.disabled = false;
+                        submitBtn.innerText = "Throw (1€)";
+                    }
+                } catch (error) {
+                    console.error("Error creating checkout session:", error);
+                    alert("Αδυναμία σύνδεσης με το backend. Περιμένετε λίγα δευτερόλεπτα και ξαναπροσπαθήστε.");
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = "Throw (1€)";
+                }
+            };
+        }
+
+        // Global Edit Function
+        window.openEditWish = (id, text, isPublic) => {
+            document.getElementById('editWishId').value = id;
+            document.getElementById('editWishText').value = text;
+            document.getElementById('editWishPublic').checked = isPublic;
+            document.getElementById('editWishModal').style.display = 'flex';
+        };
+
+        const authModal = document.getElementById('authModal');
+        const aboutModal = document.getElementById('aboutModal');
+        const myWishesModal = document.getElementById('myWishesModal');
+        const editWishModal = document.getElementById('editWishModal');
+
+        document.getElementById('authBtn').onclick = () => {
+            if (window.firebaseApp && window.firebaseApp.auth.currentUser) {
+                if (confirm("Θέλετε να αποσυνδεθείτε;")) {
+                    window.firebaseApp.signOut(window.firebaseApp.auth);
+                }
+            } else {
+                authModal.style.display = 'flex';
+            }
+        };
+
+        document.getElementById('aboutBtn').onclick = () => aboutModal.style.display = 'flex';
+        document.getElementById('closeAuthModal').onclick = () => authModal.style.display = 'none';
+        document.getElementById('closeAboutModal').onclick = () => aboutModal.style.display = 'none';
+        document.getElementById('closeMyWishesModal').onclick = () => myWishesModal.style.display = 'none';
+        document.getElementById('closeEditWishModal').onclick = () => editWishModal.style.display = 'none';
+
+        window.onclick = (e) => {
+            if (e.target === authModal) authModal.style.display = 'none';
+            if (e.target === aboutModal) aboutModal.style.display = 'none';
+            if (e.target === myWishesModal) myWishesModal.style.display = 'none';
+            if (e.target === editWishModal) editWishModal.style.display = 'none';
+        };
     </script>
 </body>
 </html>
