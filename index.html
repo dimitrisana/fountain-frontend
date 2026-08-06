@@ -167,6 +167,7 @@
     <script>
         // --- STRIPE INITIALIZATION ---
         const stripe = Stripe('pk_test_51RoFlfJiXuGDcV5C0BSXrR7w1WzhAFqACtEH0PmlO4YsBAo5yfAqrmEegNNirCBTlfqLM71UFDoKzQOR0Wnzi43o00ZIiRMyMN');
+        const BACKEND_URL = 'https://fountain-backend-mgxf.onrender.com';
 
         // --- THREE.JS SCENE SETUP ---
         const container = document.getElementById('canvas-container');
@@ -412,7 +413,7 @@
                 }
             });
 
-            // FLOW ΠΛΗΡΩΜΗΣ STRIPE ΚΑΙ ΑΠΟΘΗΚΕΥΣΗΣ ΕΥΧΗΣ
+            // FLOW ΠΛΗΡΩΜΗΣ STRIPE ME TO RENDER BACKEND
             document.getElementById('wishForm').onsubmit = async (e) => {
                 e.preventDefault();
                 const input = document.getElementById('wishInput');
@@ -424,19 +425,30 @@
                 submitBtn.innerText = "Processing...";
 
                 try {
-                    // Fallback καταγραφή στη Firestore αν δεν υπάρχει ακόμα Backend
-                    await addDoc(collection(db, "wishes"), {
-                        text: wishText,
-                        isPublic: document.getElementById('publicCheck').checked,
-                        author: currentUser ? (currentUser.displayName || currentUser.email) : "Anonymous",
-                        createdAt: serverTimestamp()
+                    // Στέλνουμε αίτημα στο Render Backend για Checkout Session
+                    const response = await fetch(`${BACKEND_URL}/api/create-checkout-session`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            wishText: wishText,
+                            isPublic: document.getElementById('publicCheck').checked,
+                            author: currentUser ? (currentUser.displayName || currentUser.email) : "Anonymous"
+                        })
                     });
-                    
-                    input.value = "";
-                    submitBtn.disabled = false;
-                    submitBtn.innerText = "Throw (1€)";
+
+                    const session = await response.json();
+
+                    if (session.id) {
+                        // Ανακατεύθυνση στη Stripe
+                        await stripe.redirectToCheckout({ sessionId: session.id });
+                    } else {
+                        alert("Σφάλμα κατά τη δημιουργία της πληρωμής.");
+                        submitBtn.disabled = false;
+                        submitBtn.innerText = "Throw (1€)";
+                    }
                 } catch (error) {
-                    console.error("Error submitting wish:", error);
+                    console.error("Error creating checkout session:", error);
+                    alert("Αδυναμία σύνδεσης με το backend. Περιμένετε 15-30 δευτερόλεπτα αν ο διακομιστής ήταν σε αδράνεια και ξαναπροσπαθήστε.");
                     submitBtn.disabled = false;
                     submitBtn.innerText = "Throw (1€)";
                 }
