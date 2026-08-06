@@ -23,7 +23,6 @@
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // Ενημερωμένο Firebase Config με το νέο API Key
         const firebaseConfig = {
             apiKey: "AIzaSyCj8_9xnUDIJJlduH_T3JRJ0hwoXcxrR7k",
             authDomain: "fountain-f98d3.firebaseapp.com",
@@ -166,6 +165,9 @@
     </div>
 
     <script>
+        // --- STRIPE INITIALIZATION ---
+        const stripe = Stripe('pk_test_51RoFlfJiXuGDcV5C0BSXrR7w1WzhAFqACtEH0PmlO4YsBAo5yfAqrmEegNNirCBTlfqLM71UFDoKzQOR0Wnzi43o00ZIiRMyMN');
+
         // --- THREE.JS SCENE SETUP ---
         const container = document.getElementById('canvas-container');
         const scene = new THREE.Scene();
@@ -217,7 +219,7 @@
 
         scene.add(fountainGroup);
 
-        // --- WATER FOUNTAIN PARTICLES ---
+        // Particles & Animations
         const particleCount = 200;
         const particlesGeo = new THREE.BufferGeometry();
         const particlePositions = new Float32Array(particleCount * 3);
@@ -240,7 +242,6 @@
         const particleSystem = new THREE.Points(particlesGeo, particleMat);
         fountainGroup.add(particleSystem);
 
-        // --- COINS SETUP ---
         const coinsGroup = new THREE.Group();
         fountainGroup.add(coinsGroup);
 
@@ -294,7 +295,7 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
-        // --- AUTH & STRIPE INTEGRATION ---
+        // --- AUTH & FIREBASE LOGIC ---
         let isSignUpMode = false;
 
         window.addEventListener('load', () => {
@@ -386,21 +387,17 @@
                 }
             };
 
-            // Google Sign-In
             document.getElementById('googleLoginBtn').onclick = async () => {
                 const genErr = document.getElementById('authGeneralError');
                 genErr.style.display = 'none';
-                
                 try {
                     await signInWithPopup(auth, provider);
                 } catch (err) {
-                    console.error("Google Auth Error:", err);
                     genErr.innerText = `Σφάλμα (${err.code}): ${err.message}`;
                     genErr.style.display = 'block';
                 }
             };
 
-            // Συγχρονισμός νομισμάτων με Firebase
             onSnapshot(collection(db, "wishes"), (snapshot) => {
                 document.getElementById('wishesCountBadge').innerText = `✨ Wishes: ${snapshot.size}`;
                 
@@ -415,27 +412,37 @@
                 }
             });
 
-            // Υποβολή ευχής
+            // FLOW ΠΛΗΡΩΜΗΣ STRIPE ΚΑΙ ΑΠΟΘΗΚΕΥΣΗΣ ΕΥΧΗΣ
             document.getElementById('wishForm').onsubmit = async (e) => {
                 e.preventDefault();
                 const input = document.getElementById('wishInput');
-                if (!input.value.trim()) return;
+                const wishText = input.value.trim();
+                if (!wishText) return;
+
+                const submitBtn = document.getElementById('submitWishBtn');
+                submitBtn.disabled = true;
+                submitBtn.innerText = "Processing...";
 
                 try {
+                    // Fallback καταγραφή στη Firestore αν δεν υπάρχει ακόμα Backend
                     await addDoc(collection(db, "wishes"), {
-                        text: input.value,
+                        text: wishText,
                         isPublic: document.getElementById('publicCheck').checked,
                         author: currentUser ? (currentUser.displayName || currentUser.email) : "Anonymous",
                         createdAt: serverTimestamp()
                     });
+                    
                     input.value = "";
-                } catch (err) {
-                    console.error("Firestore Error:", err);
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = "Throw (1€)";
+                } catch (error) {
+                    console.error("Error submitting wish:", error);
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = "Throw (1€)";
                 }
             };
         }
 
-        // Modals Event Listeners
         const authModal = document.getElementById('authModal');
         const aboutModal = document.getElementById('aboutModal');
 
