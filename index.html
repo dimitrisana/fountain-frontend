@@ -4,458 +4,255 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Wish Fountain</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- Three.js & Controls -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-    
-    <!-- Stripe SDK -->
-    <script src="https://js.stripe.com/v3/"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
 
     <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
-            getAuth, GoogleAuthProvider, signInWithPopup, 
-            createUserWithEmailAndPassword, signInWithEmailAndPassword, 
-            signOut, onAuthStateChanged, updateProfile 
+            getAuth, 
+            createUserWithEmailAndPassword, 
+            signInWithEmailAndPassword, 
+            googleProvider, 
+            signInWithPopup, 
+            onAuthStateChanged, 
+            signOut 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
+        // Firebase Configuration
         const firebaseConfig = {
-            apiKey: "AIzaSyByNdHJTyLlgtrJ3flqeAG_OK6HGpbjtQ",
+            apiKey: "AIzaSyCj8_9xnUDIJJlduH_T3JRJ0hwoXcxrR7k",
             authDomain: "fountain-f98d3.firebaseapp.com",
             projectId: "fountain-f98d3",
-            storageBucket: "fountain-f98d3.firebasestorage.app",
-            messagingSenderId: "840291797731",
-            appId: "1:840291797731:web:76b44778a6ef724f0253d6",
-            measurementId: "G-EMEZVLP8EK"
+            storageBucket: "fountain-f98d3.appspot.com",
+            messagingSenderId: "1055746211831",
+            appId: "1:1055746211831:web:5d2b7c6c4c5e3d23"
         };
 
+        // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
-        const db = getFirestore(app);
-        const provider = new GoogleAuthProvider();
+        const provider = new googleProvider();
 
-        window.firebaseApp = { 
-            auth, db, provider, signInWithPopup, 
-            createUserWithEmailAndPassword, signInWithEmailAndPassword, 
-            signOut, onAuthStateChanged, updateProfile, collection, addDoc, onSnapshot, serverTimestamp 
-        };
+        // Global functions for UI access
+        window.firebaseAuth = { auth, createUserWithEmailAndPassword, signInWithEmailAndPassword, provider, signInWithPopup, signOut };
     </script>
-
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; }
-        body { background-color: #050508; color: #fff; overflow: hidden; height: 100vh; width: 100vw; }
-        #canvas-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
-
-        .top-bar { position: absolute; top: 20px; width: 100%; padding: 0 30px; display: flex; justify-content: space-between; align-items: center; z-index: 10; }
-        .badge { background: rgba(10, 15, 25, 0.7); border: 1px solid rgba(0, 243, 255, 0.4); box-shadow: 0 0 15px rgba(0, 243, 255, 0.2); padding: 8px 18px; border-radius: 20px; font-size: 0.95rem; color: #ffcc00; font-weight: 600; backdrop-filter: blur(8px); }
-        .top-right-controls { display: flex; gap: 12px; }
-
-        .btn-neon { background: rgba(15, 12, 5, 0.8); border: 1px solid #ffaa00; color: #ffaa00; padding: 8px 18px; border-radius: 20px; font-weight: 600; cursor: pointer; transition: 0.3s; box-shadow: 0 0 10px rgba(255, 170, 0, 0.2); backdrop-filter: blur(8px); }
-        .btn-neon:hover { background: #ffaa00; color: #000; box-shadow: 0 0 20px rgba(255, 170, 0, 0.6); }
-
-        .prompt-title { position: absolute; top: 10%; left: 50%; transform: translateX(-50%); z-index: 10; background: rgba(10, 15, 25, 0.6); border: 1px solid rgba(0, 243, 255, 0.2); padding: 8px 22px; border-radius: 25px; color: #8fa0be; font-style: italic; letter-spacing: 1px; backdrop-filter: blur(5px); pointer-events: none; font-size: 0.95rem; text-align: center; }
-
-        .bottom-bar { position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%); width: 92%; max-width: 550px; background: rgba(8, 12, 20, 0.85); border: 1px solid rgba(0, 243, 255, 0.5); box-shadow: 0 0 25px rgba(0, 243, 255, 0.3); border-radius: 30px; padding: 6px 8px; display: flex; align-items: center; gap: 8px; backdrop-filter: blur(10px); z-index: 10; }
-        .bottom-bar input[type="text"] { flex: 1; min-width: 0; background: transparent; border: none; padding: 8px 12px; color: #fff; font-size: 0.95rem; outline: none; }
-        .checkbox-container { display: flex; align-items: center; gap: 4px; font-size: 0.8rem; color: #00f3ff; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
-        .btn-throw { background: linear-gradient(90deg, #ff9900, #ffbb00); border: none; color: #000; font-weight: bold; padding: 10px 18px; border-radius: 22px; cursor: pointer; box-shadow: 0 0 15px rgba(255, 153, 0, 0.5); transition: 0.3s; white-space: nowrap; flex-shrink: 0; font-size: 0.9rem; }
-        .btn-throw:hover { transform: scale(1.03); box-shadow: 0 0 25px rgba(255, 153, 0, 0.8); }
-
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); justify-content: center; align-items: center; z-index: 100; }
-        .modal-content { background: #0d1322; border: 1px solid rgba(0, 243, 255, 0.3); box-shadow: 0 0 30px rgba(0, 243, 255, 0.2); padding: 30px; border-radius: 16px; width: 90%; max-width: 450px; position: relative; text-align: center; }
-        .close-btn { position: absolute; top: 12px; right: 18px; color: #aaa; font-size: 1.5rem; cursor: pointer; transition: 0.2s; }
-        .close-btn:hover { color: #fff; }
-
-        .form-group { margin-bottom: 12px; text-align: left; }
-        .form-group label { display: block; margin-bottom: 4px; font-size: 0.8rem; color: #8fa0be; }
-        .form-group input { width: 100%; padding: 10px; background: #050811; border: 1px solid rgba(0, 243, 255, 0.2); border-radius: 8px; color: #fff; outline: none; font-size: 0.9rem; }
-        .form-group input:focus { border-color: #00f3ff; }
-
-        .btn-submit-modal { width: 100%; padding: 10px; background: linear-gradient(90deg, #00f3ff, #0077ff); border: none; border-radius: 8px; color: #fff; font-weight: bold; cursor: pointer; margin-top: 8px; transition: 0.3s; }
-        .btn-submit-modal:hover { opacity: 0.9; }
-        .btn-google { width: 100%; padding: 10px; background: #4285f4; border: none; border-radius: 8px; color: #fff; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 10px; }
-        .btn-google:hover { background: #357ae8; }
-        .toggle-auth { color: #00f3ff; font-size: 0.8rem; cursor: pointer; margin-top: 10px; display: inline-block; text-decoration: underline; }
-        .error-msg { color: #ff4757; font-size: 0.8rem; margin-top: 8px; display: none; text-align: center; word-break: break-word; }
-        .divider { display: flex; align-items: center; margin: 15px 0; color: #6a7b95; font-size: 0.75rem; }
-        .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: rgba(0, 243, 255, 0.2); }
-        .divider span { padding: 0 8px; }
-
-        .about-text { text-align: left; color: #a0aec0; font-size: 0.9rem; line-height: 1.6; margin-top: 10px; }
-        .about-text strong { color: #00f3ff; }
-    </style>
 </head>
-<body>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
 
-    <div id="canvas-container"></div>
-
-    <div class="top-bar">
-        <div class="badge" id="wishesCountBadge">✨ Wishes: 0</div>
-        <div class="top-right-controls">
-            <button class="btn-neon" id="aboutBtn">✨ About</button>
-            <button class="btn-neon" id="authBtn">🔑 Login / Sign Up</button>
-        </div>
-    </div>
-
-    <div class="prompt-title">Make your wish come true... ✨</div>
-
-    <form class="bottom-bar" id="wishForm">
-        <input type="text" id="wishInput" placeholder="Make a wish..." required autocomplete="off">
-        <label class="checkbox-container">
-            <input type="checkbox" id="publicCheck" checked> Public
-        </label>
-        <button type="submit" class="btn-throw" id="submitWishBtn">Throw (1€)</button>
-    </form>
-
-    <!-- Modal Σύνδεσης -->
-    <div class="modal" id="authModal">
-        <div class="modal-content">
-            <span class="close-btn" id="closeAuthModal">&times;</span>
-            <h2 style="margin-bottom: 15px; color: #00f3ff;" id="modalTitle">Σύνδεση</h2>
+    <!-- Header / Navbar -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <i class="fa-solid font-bold text-indigo-600 text-2xl fa-wand-magic-sparkles"></i>
+                <span class="text-xl font-bold text-slate-900 tracking-tight">Wish Fountain</span>
+            </div>
             
-            <form id="emailAuthForm">
-                <div class="form-group" id="nameGroup" style="display: none;">
-                    <label>Όνομα</label>
-                    <input type="text" id="authName" placeholder="Το όνομά σας">
-                </div>
-                <div class="form-group">
-                    <label>Email</label>
-                    <input type="email" id="authEmail" placeholder="email@example.com" required>
-                </div>
-                <div class="form-group">
-                    <label>Κωδικός</label>
-                    <input type="password" id="authPassword" placeholder="******" required>
-                    <div class="error-msg" id="passwordError" style="text-align: left;">Ο κωδικός πρέπει να έχει τουλάχιστον 7 χαρακτήρες και 1 κεφαλαίο γράμμα.</div>
-                </div>
-                <button type="submit" class="btn-submit-modal" id="authSubmitBtn">Σύνδεση</button>
-            </form>
+            <div id="auth-buttons" class="flex items-center space-x-3">
+                <button id="open-login-btn" class="text-sm font-medium text-slate-600 hover:text-indigo-600 px-3 py-2 transition">
+                    Σύνδεση
+                </button>
+                <button id="open-register-btn" class="text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 px-4 py-2 rounded-lg transition shadow-sm">
+                    Εγγραφή
+                </button>
+            </div>
 
-            <span class="toggle-auth" id="toggleAuthMode">Δεν έχετε λογαριασμό; Εγγραφή</span>
-
-            <div class="divider"><span>Ή</span></div>
-
-            <button class="btn-google" id="googleLoginBtn">Sign in with Google</button>
-            <div class="error-msg" id="authGeneralError"></div>
-        </div>
-    </div>
-
-    <!-- Modal About -->
-    <div class="modal" id="aboutModal">
-        <div class="modal-content">
-            <span class="close-btn" id="closeAboutModal">&times;</span>
-            <h2 style="margin-bottom: 15px; color: #ffaa00;">✨ Wish Fountain</h2>
-            <div class="about-text">
-                <p style="margin-bottom: 12px;">
-                    Καλώς ήρθατε στο <strong>Wish Fountain</strong>, ένα ψηφιακό σιντριβάνι ευχών όπου η ενέργεια των ανθρώπων από όλο τον κόσμο συναντιέται.
-                </p>
-                <p style="margin-bottom: 12px;">
-                    🎯 <strong>Πώς λειτουργεί;</strong><br>
-                    Κάθε φορά που ρίχνετε ένα νόμισμα (1€), η ευχή σας καταγράφεται για πάντα στο σιντριβάνι.
-                </p>
-                <p>
-                    🌟 <strong>Public ή Private:</strong><br>
-                    Επιλέξτε αν θέλετε η ευχή σας να εμφανίζεται δημόσια στην κοινότητα ή να παραμείνει η δική σας κρυφή ελπίδα.
-                </p>
+            <div id="user-profile" class="hidden flex items-center space-x-4">
+                <span id="user-email-display" class="text-sm font-medium text-slate-600"></span>
+                <button id="logout-btn" class="text-sm font-medium text-red-600 hover:text-red-700 px-3 py-2 transition">
+                    Αποσύνδεση
+                </button>
             </div>
         </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10 flex flex-col items-center justify-center text-center">
+        <div class="max-w-2xl">
+            <h1 class="text-4xl sm:text-5xl font-extrabold text-slate-900 tracking-tight mb-4">
+                Πραγματοποίησε τις ευχές σου στο <span class="text-indigo-600">Wish Fountain</span>
+            </h1>
+            <p class="text-lg text-slate-600 mb-8">
+                Η πλατφόρμα που συνδέει τις επιθυμίες σου με τον κόσμο. Κάνε εγγραφή τώρα για να ξεκινήσεις!
+            </p>
+        </div>
+    </main>
+
+    <!-- Auth Modal -->
+    <div id="auth-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 sm:p-8 relative">
+            <button id="close-modal-btn" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+
+            <!-- Login Form -->
+            <div id="login-form-container">
+                <h2 class="text-2xl font-bold text-slate-900 mb-2">Καλώς ήρθατε ξανά</h2>
+                <p class="text-sm text-slate-500 mb-6">Συνδεθείτε στον λογαριασμό σας</p>
+
+                <form id="login-form" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Email</label>
+                        <input type="email" id="login-email" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Κωδικός πρόσβασης</label>
+                        <input type="password" id="login-password" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+                    </div>
+                    <button type="submit" class="w-full bg-indigo-600 text-white font-medium py-2.5 rounded-lg hover:bg-indigo-700 transition shadow-sm">
+                        Σύνδεση
+                    </button>
+                </form>
+
+                <div class="relative my-6">
+                    <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-slate-200"></div></div>
+                    <div class="relative flex justify-center text-xs uppercase"><span class="bg-white px-2 text-slate-400">Ή</span></div>
+                </div>
+
+                <button id="google-login-btn" class="w-full border border-slate-300 font-medium py-2.5 rounded-lg hover:bg-slate-50 transition flex items-center justify-center space-x-2 text-slate-700">
+                    <i class="fa-brands fa-google text-red-500"></i>
+                    <span>Σύνδεση με Google</span>
+                </button>
+
+                <p class="text-xs text-center text-slate-500 mt-6">
+                    Δεν έχετε λογαριασμό; 
+                    <button id="switch-to-register" class="text-indigo-600 font-semibold hover:underline">Εγγραφή</button>
+                </p>
+            </div>
+
+            <!-- Register Form -->
+            <div id="register-form-container" class="hidden">
+                <h2 class="text-2xl font-bold text-slate-900 mb-2">Δημιουργία λογαριασμού</h2>
+                <p class="text-sm text-slate-500 mb-6">Ξεκινήστε δωρεάν σήμερα</p>
+
+                <form id="register-form" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Email</label>
+                        <input type="email" id="register-email" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Κωδικός πρόσβασης</label>
+                        <input type="password" id="register-password" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+                    </div>
+                    <button type="submit" class="w-full bg-indigo-600 text-white font-medium py-2.5 rounded-lg hover:bg-indigo-700 transition shadow-sm">
+                        Δημιουργία Λογαριασμού
+                    </button>
+                </form>
+
+                <p class="text-xs text-center text-slate-500 mt-6">
+                    Έχετε ήδη λογαριασμό; 
+                    <button id="switch-to-login" class="text-indigo-600 font-semibold hover:underline">Σύνδεση</button>
+                </p>
+            </div>
+
+            <div id="auth-error" class="hidden mt-4 p-3 bg-red-50 text-red-700 text-xs rounded-lg border border-red-200"></div>
+        </div>
     </div>
 
+    <!-- UI Interaction Script -->
     <script>
-        // --- THREE.JS SCENE SETUP ---
-        const container = document.getElementById('canvas-container');
-        const scene = new THREE.Scene();
-        scene.fog = new THREE.FogExp2(0x050508, 0.03);
+        document.addEventListener('DOMContentLoaded', () => {
+            const modal = document.getElementById('auth-modal');
+            const openLoginBtn = document.getElementById('open-login-btn');
+            const openRegisterBtn = document.getElementById('open-register-btn');
+            const closeModalBtn = document.getElementById('close-modal-btn');
+            const loginContainer = document.getElementById('login-form-container');
+            const registerContainer = document.getElementById('register-form-container');
+            const switchToRegister = document.getElementById('switch-to-register');
+            const switchToLogin = document.getElementById('switch-to-login');
+            const authError = document.getElementById('auth-error');
 
-        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 3.5, 5.5);
-
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(window.devicePixelRatio);
-        container.appendChild(renderer.domElement);
-
-        const controls = new THREE.OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true;
-        controls.maxPolarAngle = Math.PI / 2.1;
-
-        // Lights
-        const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
-        scene.add(ambientLight);
-        const dirLight = new THREE.DirectionalLight(0xffffff, 1.8);
-        dirLight.position.set(5, 10, 7);
-        scene.add(dirLight);
-
-        // Fountain Model
-        const fountainGroup = new THREE.Group();
-        const darkMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.3, metalness: 0.3 });
-        const waterMat = new THREE.MeshStandardMaterial({ color: 0x00f3ff, emissive: 0x0088aa, roughness: 0.1, transparent: true, opacity: 0.85 });
-
-        const base = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 3, 0.4, 32), darkMat);
-        base.position.y = -1;
-        fountainGroup.add(base);
-
-        const waterBase = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 2.4, 0.1, 32), waterMat);
-        waterBase.position.y = -0.78;
-        fountainGroup.add(waterBase);
-
-        const pedestal = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.4, 1.2, 16), darkMat);
-        pedestal.position.y = -0.2;
-        fountainGroup.add(pedestal);
-
-        const bowl = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 0.8, 0.3, 32), darkMat);
-        bowl.position.y = 0.4;
-        fountainGroup.add(bowl);
-
-        const topWater = new THREE.Mesh(new THREE.CylinderGeometry(1.15, 1.15, 0.05, 32), waterMat);
-        topWater.position.y = 0.53;
-        fountainGroup.add(topWater);
-
-        scene.add(fountainGroup);
-
-        // --- WATER FOUNTAIN PARTICLES ---
-        const particleCount = 200;
-        const particlesGeo = new THREE.BufferGeometry();
-        const particlePositions = new Float32Array(particleCount * 3);
-        const velocities = [];
-
-        for (let i = 0; i < particleCount; i++) {
-            particlePositions[i * 3] = 0;
-            particlePositions[i * 3 + 1] = 0.55;
-            particlePositions[i * 3 + 2] = 0;
-
-            velocities.push({
-                x: (Math.random() - 0.5) * 0.025,
-                y: Math.random() * 0.04 + 0.035,
-                z: (Math.random() - 0.5) * 0.025
-            });
-        }
-
-        particlesGeo.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
-        const particleMat = new THREE.PointsMaterial({ color: 0x00ffff, size: 0.05, transparent: true, opacity: 0.9 });
-        const particleSystem = new THREE.Points(particlesGeo, particleMat);
-        fountainGroup.add(particleSystem);
-
-        // --- COINS SETUP ---
-        const coinsGroup = new THREE.Group();
-        fountainGroup.add(coinsGroup);
-
-        const coinGeo = new THREE.CylinderGeometry(0.09, 0.09, 0.02, 16);
-        const coinMat = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.95, roughness: 0.15 });
-
-        function addCoinToFountain() {
-            const coin = new THREE.Mesh(coinGeo, coinMat);
-            const radius = Math.random() * 0.75;
-            const angle = Math.random() * Math.PI * 2;
-            
-            coin.position.set(Math.cos(angle) * radius, 0.57, Math.sin(angle) * radius);
-            coin.rotation.x = Math.PI / 2 + (Math.random() - 0.5) * 0.2;
-            coin.rotation.z = Math.random() * Math.PI;
-
-            coinsGroup.add(coin);
-        }
-
-        function animate() {
-            requestAnimationFrame(animate);
-
-            const positions = particleSystem.geometry.attributes.position.array;
-            for (let i = 0; i < particleCount; i++) {
-                positions[i * 3] += velocities[i].x;
-                positions[i * 3 + 1] += velocities[i].y;
-                positions[i * 3 + 2] += velocities[i].z;
-
-                velocities[i].y -= 0.0016;
-
-                if (positions[i * 3 + 1] < 0.52) {
-                    positions[i * 3] = 0;
-                    positions[i * 3 + 1] = 0.55;
-                    positions[i * 3 + 2] = 0;
-
-                    velocities[i].x = (Math.random() - 0.5) * 0.025;
-                    velocities[i].y = Math.random() * 0.04 + 0.035;
-                    velocities[i].z = (Math.random() - 0.5) * 0.025;
-                }
-            }
-            particleSystem.geometry.attributes.position.needsUpdate = true;
-
-            fountainGroup.rotation.y += 0.0025;
-            controls.update();
-            renderer.render(scene, camera);
-        }
-        animate();
-
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-
-        // --- AUTH & STRIPE INTEGRATION ---
-        let isSignUpMode = false;
-
-        window.addEventListener('load', () => {
-            const interval = setInterval(() => {
-                if (window.firebaseApp) {
-                    clearInterval(interval);
-                    initApp();
-                }
-            }, 100);
-        });
-
-        function initApp() {
-            const { 
-                auth, db, provider, signInWithPopup, 
-                createUserWithEmailAndPassword, signInWithEmailAndPassword, 
-                signOut, onAuthStateChanged, updateProfile, collection, addDoc, onSnapshot, serverTimestamp 
-            } = window.firebaseApp;
-
-            let currentUser = null;
-
-            onAuthStateChanged(auth, (user) => {
-                currentUser = user;
-                const authBtn = document.getElementById('authBtn');
-                if (user) {
-                    authBtn.innerText = `👤 ${user.displayName || user.email.split('@')[0]}`;
-                    document.getElementById('authModal').style.display = 'none';
+            const openModal = (isRegister = false) => {
+                modal.classList.remove('hidden');
+                authError.classList.add('hidden');
+                if (isRegister) {
+                    loginContainer.classList.add('hidden');
+                    registerContainer.classList.remove('hidden');
                 } else {
-                    authBtn.innerText = '🔑 Login / Sign Up';
-                }
-            });
-
-            const toggleBtn = document.getElementById('toggleAuthMode');
-            const modalTitle = document.getElementById('modalTitle');
-            const authSubmitBtn = document.getElementById('authSubmitBtn');
-            const nameGroup = document.getElementById('nameGroup');
-
-            toggleBtn.onclick = () => {
-                isSignUpMode = !isSignUpMode;
-                document.getElementById('passwordError').style.display = 'none';
-                document.getElementById('authGeneralError').style.display = 'none';
-                
-                if (isSignUpMode) {
-                    modalTitle.innerText = "Εγγραφή";
-                    authSubmitBtn.innerText = "Δημιουργία Λογαριασμού";
-                    toggleBtn.innerText = "Έχετε ήδη λογαριασμό; Σύνδεση";
-                    nameGroup.style.display = "block";
-                } else {
-                    modalTitle.innerText = "Σύνδεση";
-                    authSubmitBtn.innerText = "Σύνδεση";
-                    toggleBtn.innerText = "Δεν έχετε λογαριασμό; Εγγραφή";
-                    nameGroup.style.display = "none";
+                    loginContainer.classList.remove('hidden');
+                    registerContainer.classList.add('hidden');
                 }
             };
 
-            document.getElementById('emailAuthForm').onsubmit = async (e) => {
-                e.preventDefault();
-                const email = document.getElementById('authEmail').value;
-                const password = document.getElementById('authPassword').value;
-                const name = document.getElementById('authName').value;
-                const passErr = document.getElementById('passwordError');
-                const genErr = document.getElementById('authGeneralError');
-                
-                passErr.style.display = 'none';
-                genErr.style.display = 'none';
+            const closeModal = () => modal.classList.add('hidden');
 
-                const passRegex = /^(?=.*[A-Z]).{7,}$/;
+            openLoginBtn.addEventListener('click', () => openModal(false));
+            openRegisterBtn.addEventListener('click', () => openModal(true));
+            closeModalBtn.addEventListener('click', closeModal);
+            switchToRegister.addEventListener('click', () => openModal(true));
+            switchToLogin.addEventListener('click', () => openModal(false));
 
-                if (isSignUpMode) {
-                    if (!passRegex.test(password)) {
-                        passErr.style.display = 'block';
-                        return;
+            // Auth Event Handlers
+            setTimeout(() => {
+                const { auth, createUserWithEmailAndPassword, signInWithEmailAndPassword, provider, signInWithPopup, signOut } = window.firebaseAuth;
+
+                // Monitor Auth State
+                auth.onAuthStateChanged((user) => {
+                    const authButtons = document.getElementById('auth-buttons');
+                    const userProfile = document.getElementById('user-profile');
+                    const userEmailDisplay = document.getElementById('user-email-display');
+
+                    if (user) {
+                        authButtons.classList.add('hidden');
+                        userProfile.classList.remove('hidden');
+                        userEmailDisplay.textContent = user.email;
+                        closeModal();
+                    } else {
+                        authButtons.classList.remove('hidden');
+                        userProfile.classList.add('hidden');
                     }
-                    try {
-                        const userCred = await createUserWithEmailAndPassword(auth, email, password);
-                        if (name.trim()) {
-                            await updateProfile(userCred.user, { displayName: name });
-                        }
-                    } catch (err) {
-                        genErr.innerText = `Σφάλμα: ${err.message}`;
-                        genErr.style.display = 'block';
-                    }
-                } else {
+                });
+
+                // Login Submit
+                document.getElementById('login-form').addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const email = document.getElementById('login-email').value;
+                    const password = document.getElementById('login-password').value;
                     try {
                         await signInWithEmailAndPassword(auth, email, password);
                     } catch (err) {
-                        genErr.innerText = "Λάθος στοιχεία σύνδεσης.";
-                        genErr.style.display = 'block';
+                        authError.textContent = err.message;
+                        authError.classList.remove('hidden');
                     }
-                }
-            };
+                });
 
-            // Google Sign-In
-            document.getElementById('googleLoginBtn').onclick = async () => {
-                const genErr = document.getElementById('authGeneralError');
-                genErr.style.display = 'none';
-                
-                try {
-                    await signInWithPopup(auth, provider);
-                } catch (err) {
-                    console.error("Google Auth Error:", err);
-                    genErr.innerText = `Σφάλμα (${err.code}): ${err.message}`;
-                    genErr.style.display = 'block';
-                }
-            };
+                // Register Submit
+                document.getElementById('register-form').addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const email = document.getElementById('register-email').value;
+                    const password = document.getElementById('register-password').value;
+                    try {
+                        await createUserWithEmailAndPassword(auth, email, password);
+                    } catch (err) {
+                        authError.textContent = err.message;
+                        authError.classList.remove('hidden');
+                    }
+                });
 
-            // Συγχρονισμός νομισμάτων με Firebase
-            onSnapshot(collection(db, "wishes"), (snapshot) => {
-                document.getElementById('wishesCountBadge').innerText = `✨ Wishes: ${snapshot.size}`;
-                
-                while(coinsGroup.children.length > 0){ 
-                    coinsGroup.remove(coinsGroup.children[0]); 
-                }
-                
-                if (snapshot.size === 0) {
-                    for(let i = 0; i < 5; i++) addCoinToFountain();
-                } else {
-                    snapshot.forEach(() => addCoinToFountain());
-                }
-            });
+                // Google Login
+                document.getElementById('google-login-btn').addEventListener('click', async () => {
+                    try {
+                        await signInWithPopup(auth, provider);
+                    } catch (err) {
+                        authError.textContent = err.message;
+                        authError.classList.remove('hidden');
+                    }
+                });
 
-            // Υποβολή ευχής
-            document.getElementById('wishForm').onsubmit = async (e) => {
-                e.preventDefault();
-                const input = document.getElementById('wishInput');
-                if (!input.value.trim()) return;
+                // Logout
+                document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
 
-                try {
-                    await addDoc(collection(db, "wishes"), {
-                        text: input.value,
-                        isPublic: document.getElementById('publicCheck').checked,
-                        author: currentUser ? (currentUser.displayName || currentUser.email) : "Anonymous",
-                        createdAt: serverTimestamp()
-                    });
-                    input.value = "";
-                } catch (err) {
-                    console.error("Firestore Error:", err);
-                }
-            };
-        }
-
-        // Modals Event Listeners
-        const authModal = document.getElementById('authModal');
-        const aboutModal = document.getElementById('aboutModal');
-
-        document.getElementById('authBtn').onclick = () => {
-            if (window.firebaseApp && window.firebaseApp.auth.currentUser) {
-                if (confirm("Θέλετε να αποσυνδεθείτε;")) {
-                    window.firebaseApp.signOut(window.firebaseApp.auth);
-                }
-            } else {
-                authModal.style.display = 'flex';
-            }
-        };
-
-        document.getElementById('aboutBtn').onclick = () => aboutModal.style.display = 'flex';
-        document.getElementById('closeAuthModal').onclick = () => authModal.style.display = 'none';
-        document.getElementById('closeAboutModal').onclick = () => aboutModal.style.display = 'none';
-
-        window.onclick = (e) => {
-            if (e.target === authModal) authModal.style.display = 'none';
-            if (e.target === aboutModal) aboutModal.style.display = 'none';
-        };
+            }, 1000);
+        });
     </script>
 </body>
 </html>
